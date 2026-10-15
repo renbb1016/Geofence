@@ -74,7 +74,7 @@ insert into public.active_track (id, track_id)
 values (1, null)
 on conflict (id) do nothing;
 
--- The boundaries the car should use, copied here by "Use for Car" so a
+-- The boundaries the car should use, copied here by "Set Bound for Car" so a
 -- drawing can be sent to the car without saving it as a track.
 -- An empty outer_bound means nothing has been sent yet.
 -- (track_id above is no longer used.)

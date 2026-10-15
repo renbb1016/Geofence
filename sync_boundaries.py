@@ -1,7 +1,7 @@
 """
 Keeps coordinates.csv in sync with the active track stored in Supabase.
 
-The website's "Use for Car" button stores the boundaries in Supabase. This
+The website's "Set Bound for Car" button stores the boundaries in Supabase. This
 script polls Supabase, and whenever those boundaries change it rewrites
 coordinates.csv in the same format computer_end_code.py already reads:
 

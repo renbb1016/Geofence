@@ -43,6 +43,8 @@
             justify-self: start;
             background: #2e7d32;
             font-weight: bold;
+            font-size: 18px;
+            padding: 16px 24px;
         }
 
         #trackStatus {
@@ -275,6 +277,11 @@
                 font-size: 20px;
             }
 
+            .car-btn {
+                font-size: 16px;
+                padding: 14px 16px;
+            }
+
             header {
                 grid-template-columns: auto 1fr;
                 grid-template-areas:
@@ -299,7 +306,7 @@
 
 <header>
     <button class="car-btn" id="activateTrackButton">
-        Use for Car
+        Set Bound for Car
     </button>
 
     <div class="header-title">
@@ -613,7 +620,7 @@
             permanent: true,
             interactive: true,
             direction: "right",
-            offset: [6, -24],
+            offset: [-4, -8],
             className: "pin-delete"
         });
 
