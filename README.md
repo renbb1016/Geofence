@@ -24,7 +24,7 @@ Website  ->  Supabase  ->  sync_boundaries.py  ->  coordinates.csv  ->  computer
 3. Do the same with **+ New Inner Bound** (optional).
 4. Click the green **Set Final Bounds For Car** button at the top. The top right shows what the car is using.
 
-Made a mistake? Click the red **×** next to a pin to delete just that pin, or drag
+Made a mistake? Hover over a pin for a second (or tap it on a phone) and click the red **×** to delete just that pin, or drag
 the pin to move it.
 
 Saving is optional, for tracks you want to reuse:
