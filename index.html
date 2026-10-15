@@ -67,6 +67,11 @@
             opacity: 0.85;
         }
 
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .outer-btn {
             background: #1976d2;
         }
@@ -119,6 +124,38 @@
             border-radius: 6px;
         }
 
+        .track-panel {
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 2fr 1fr 2fr 1fr 1fr;
+            gap: 8px;
+            background: white;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .track-panel select,
+        .track-panel input {
+            padding: 10px;
+            border: 1px solid #bbb;
+            border-radius: 6px;
+            font-size: 14px;
+            min-width: 0;
+        }
+
+        .save-btn {
+            background: #00897b;
+        }
+
+        .active-btn {
+            background: #ef6c00;
+        }
+
+        #trackStatus {
+            grid-column: 1 / -1;
+            font-size: 14px;
+            color: #333;
+        }
+
         @media (max-width: 700px) {
             #map {
                 height: 55vh;
@@ -126,6 +163,10 @@
 
             .controls {
                 grid-template-columns: repeat(2, 1fr);
+            }
+
+            .track-panel {
+                grid-template-columns: 2fr 1fr;
             }
 
             .coordinates-container {
@@ -147,7 +188,8 @@
                 height: 50vh;
             }
 
-            .controls {
+            .controls,
+            .track-panel {
                 grid-template-columns: 1fr;
             }
         }
@@ -162,6 +204,35 @@
 </header>
 
 <div id="map"></div>
+
+<div class="track-panel">
+
+    <select id="trackSelect">
+        <option value="">Saved tracks...</option>
+    </select>
+
+    <button id="loadTrackButton">
+        Load Track
+    </button>
+
+    <input
+        id="trackName"
+        type="text"
+        maxlength="80"
+        placeholder="Track name"
+    />
+
+    <button class="save-btn" id="saveTrackButton">
+        Save Track
+    </button>
+
+    <button class="active-btn" id="activateTrackButton">
+        Use for Car
+    </button>
+
+    <div id="trackStatus">Connecting to database...</div>
+
+</div>
 
 <div class="controls">
 
@@ -256,9 +327,21 @@
     <p>
         You can create as many outer and inner bounds as needed.
     </p>
+
+    <p>
+        <strong>7.</strong> Type a track name and press <b>Save Track</b>.
+        Only the first finished outer bound and the first finished inner
+        bound are saved.
+    </p>
+
+    <p>
+        <strong>8.</strong> Choose a saved track and press <b>Use for Car</b>.
+        The computer connected to the car picks it up automatically.
+    </p>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 
 <script>
 
@@ -437,10 +520,12 @@
 
 
         // When marker is dragged,
-        // redraw the polygon.
+        // redraw the polygon it belongs to.
+        const bound = currentBound;
+
         marker.on("drag", function () {
 
-            drawPolygon(currentBound);
+            drawPolygon(bound);
             updateCoordinates();
 
         });
@@ -448,7 +533,7 @@
 
         marker.on("dragend", function () {
 
-            drawPolygon(currentBound);
+            drawPolygon(bound);
             updateCoordinates();
 
         });
@@ -845,44 +930,362 @@
     // CLEAR EVERYTHING
     // ==========================================
 
-    document
-        .getElementById("clearAllButton")
-        .addEventListener("click", function () {
+    function clearAllBounds() {
 
-            const allBounds =
-                outerBounds.concat(innerBounds);
+        const allBounds =
+            outerBounds.concat(innerBounds);
 
 
-            allBounds.forEach(function (bound) {
+        allBounds.forEach(function (bound) {
 
-                bound.markers.forEach(function (marker) {
+            bound.markers.forEach(function (marker) {
 
-                    map.removeLayer(marker);
-
-                });
-
-
-                if (bound.polygon) {
-
-                    map.removeLayer(
-                        bound.polygon
-                    );
-
-                }
+                map.removeLayer(marker);
 
             });
 
 
-            outerBounds = [];
-            innerBounds = [];
+            if (bound.polygon) {
 
-            currentBound = null;
-            currentType = null;
+                map.removeLayer(
+                    bound.polygon
+                );
 
+            }
+
+        });
+
+
+        outerBounds = [];
+        innerBounds = [];
+
+        currentBound = null;
+        currentType = null;
+
+
+        updateCoordinates();
+        updateStatus();
+    }
+
+
+    document
+        .getElementById("clearAllButton")
+        .addEventListener("click", clearAllBounds);
+
+
+    // ==========================================
+    // SUPABASE (saved tracks)
+    // ==========================================
+
+    // Supabase dashboard -> Project Settings -> API.
+    // The anon key is public by design; the database rules in
+    // supabase/schema.sql limit what it can do.
+    // Never put the service_role key here.
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+    const MAX_POINTS = 500;
+
+    const supabaseConfigured =
+        !SUPABASE_URL.startsWith("YOUR_") &&
+        !SUPABASE_ANON_KEY.startsWith("YOUR_");
+
+    const db = supabaseConfigured
+        ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        : null;
+
+    const trackSelect = document.getElementById("trackSelect");
+    const trackName = document.getElementById("trackName");
+    const trackStatus = document.getElementById("trackStatus");
+
+    let savedTracks = [];
+
+
+    function setTrackStatus(text) {
+        trackStatus.textContent = text;
+    }
+
+
+    // Convert a finished bound to [[lat, lng], ...]
+    function boundToPoints(bound) {
+
+        return bound.markers.map(function (marker) {
+
+            let position = marker.getLatLng();
+
+            // Bring longitude back within -180..180
+            // if the map was scrolled around the globe
+            if (position.lng < -180 || position.lng > 180) {
+                position = position.wrap();
+            }
+
+            return [position.lat, position.lng];
+        });
+    }
+
+
+    // Same rules as supabase/schema.sql and sync_boundaries.py
+    function validatePoints(points, minPoints, label) {
+
+        if (points.length === 0 && minPoints === 0) {
+            return null;
+        }
+
+        if (points.length < Math.max(minPoints, 3)) {
+            return `${label} bound needs at least 3 points.`;
+        }
+
+        if (points.length > MAX_POINTS) {
+            return `${label} bound has more than ${MAX_POINTS} points.`;
+        }
+
+        for (const [lat, lng] of points) {
+
+            if (!Number.isFinite(lat) || !Number.isFinite(lng) ||
+                lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+
+                return `${label} bound has an invalid point.`;
+            }
+        }
+
+        return null;
+    }
+
+
+    async function refreshTracks(selectId) {
+
+        const { data, error } = await db
+            .from("tracks")
+            .select("id, name, outer_bound, inner_bound, updated_at")
+            .order("name");
+
+        if (error) {
+            setTrackStatus("Could not load tracks: " + error.message);
+            return;
+        }
+
+        savedTracks = data;
+
+        trackSelect.innerHTML =
+            '<option value="">Saved tracks...</option>';
+
+        savedTracks.forEach(function (track) {
+
+            const option = document.createElement("option");
+
+            option.value = track.id;
+            option.textContent = track.name;
+
+            trackSelect.appendChild(option);
+        });
+
+        if (selectId) {
+            trackSelect.value = selectId;
+        }
+
+        await showActiveTrack();
+    }
+
+
+    async function showActiveTrack() {
+
+        const { data, error } = await db
+            .from("active_track")
+            .select("track_id, updated_at, tracks(name)")
+            .eq("id", 1)
+            .single();
+
+        if (error) {
+            setTrackStatus("Could not read the active track: " + error.message);
+            return;
+        }
+
+        if (!data.track_id) {
+            setTrackStatus("No track is being used by the car yet.");
+            return;
+        }
+
+        setTrackStatus(
+            `Car is using: ${data.tracks.name} ` +
+            `(set ${new Date(data.updated_at).toLocaleString()})`
+        );
+    }
+
+
+    function loadBound(type, points) {
+
+        if (points.length === 0) {
+            return;
+        }
+
+        createBound(type);
+
+        points.forEach(function (point) {
+            addPoint(point[0], point[1]);
+        });
+
+        currentBound.finished = true;
+
+        drawPolygon(currentBound);
+    }
+
+
+    document
+        .getElementById("loadTrackButton")
+        .addEventListener("click", function () {
+
+            const track = savedTracks.find(function (t) {
+                return t.id === trackSelect.value;
+            });
+
+            if (!track) {
+                alert("Choose a saved track first.");
+                return;
+            }
+
+            clearAllBounds();
+
+            loadBound("outer", track.outer_bound);
+            loadBound("inner", track.inner_bound);
+
+            trackName.value = track.name;
+
+            const allBounds = outerBounds.concat(innerBounds);
+
+            if (allBounds.length > 0) {
+                map.fitBounds(
+                    L.featureGroup(
+                        allBounds.map(function (b) { return b.polygon; })
+                    ).getBounds()
+                );
+            }
 
             updateCoordinates();
             updateStatus();
         });
+
+
+    document
+        .getElementById("saveTrackButton")
+        .addEventListener("click", async function () {
+
+            const name = trackName.value.trim();
+
+            if (!name) {
+                alert("Type a track name first.");
+                return;
+            }
+
+            const finishedOuter = outerBounds.filter(function (b) {
+                return b.finished;
+            });
+
+            const finishedInner = innerBounds.filter(function (b) {
+                return b.finished;
+            });
+
+            if (finishedOuter.length === 0) {
+                alert("Finish an outer bound before saving.");
+                return;
+            }
+
+            const outerPoints = boundToPoints(finishedOuter[0]);
+
+            const innerPoints = finishedInner.length > 0
+                ? boundToPoints(finishedInner[0])
+                : [];
+
+            const problem =
+                validatePoints(outerPoints, 3, "Outer") ||
+                validatePoints(innerPoints, 0, "Inner");
+
+            if (problem) {
+                alert(problem);
+                return;
+            }
+
+            if (finishedOuter.length > 1 || finishedInner.length > 1) {
+
+                const ok = confirm(
+                    "Only the first finished outer bound and the first " +
+                    "finished inner bound will be saved. Continue?"
+                );
+
+                if (!ok) {
+                    return;
+                }
+            }
+
+            setTrackStatus("Saving...");
+
+            const { data, error } = await db
+                .from("tracks")
+                .upsert(
+                    {
+                        name: name,
+                        outer_bound: outerPoints,
+                        inner_bound: innerPoints
+                    },
+                    { onConflict: "name" }
+                )
+                .select("id")
+                .single();
+
+            if (error) {
+                setTrackStatus("Save failed: " + error.message);
+                return;
+            }
+
+            await refreshTracks(data.id);
+
+            alert(
+                `Saved "${name}".\n\n` +
+                "Press Use for Car to send it to the car."
+            );
+        });
+
+
+    document
+        .getElementById("activateTrackButton")
+        .addEventListener("click", async function () {
+
+            const track = savedTracks.find(function (t) {
+                return t.id === trackSelect.value;
+            });
+
+            if (!track) {
+                alert("Choose a saved track first.");
+                return;
+            }
+
+            const { error } = await db
+                .from("active_track")
+                .update({ track_id: track.id })
+                .eq("id", 1);
+
+            if (error) {
+                setTrackStatus("Could not set the track: " + error.message);
+                return;
+            }
+
+            await showActiveTrack();
+        });
+
+
+    if (db) {
+        refreshTracks();
+    } else {
+
+        setTrackStatus(
+            "Database not set up: add SUPABASE_URL and " +
+            "SUPABASE_ANON_KEY in index.html."
+        );
+
+        ["loadTrackButton", "saveTrackButton", "activateTrackButton"]
+            .forEach(function (id) {
+                document.getElementById(id).disabled = true;
+            });
+    }
 
 
     // ==========================================
