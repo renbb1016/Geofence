@@ -690,7 +690,7 @@
         });
 
 
-        // Only show the x after hovering over the pin for a second
+        // Only show the x after hovering over the pin briefly
         // (or tapping it on a phone), so the map stays uncluttered.
         let showTimer = null;
         let hideTimer = null;
@@ -712,7 +712,7 @@
         marker.on("mouseover", function () {
             clearTimeout(hideTimer);
             clearTimeout(showTimer);
-            showTimer = setTimeout(showDelete, 1000);
+            showTimer = setTimeout(showDelete, 400);
         });
 
         // Short delay so there is time to move the mouse onto the x
