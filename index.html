@@ -67,11 +67,6 @@
             opacity: 0.85;
         }
 
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
         .outer-btn {
             background: #1976d2;
         }
@@ -124,38 +119,6 @@
             border-radius: 6px;
         }
 
-        .track-panel {
-            padding: 12px;
-            display: grid;
-            grid-template-columns: 2fr 1fr 2fr 1fr 1fr;
-            gap: 8px;
-            background: white;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .track-panel select,
-        .track-panel input {
-            padding: 10px;
-            border: 1px solid #bbb;
-            border-radius: 6px;
-            font-size: 14px;
-            min-width: 0;
-        }
-
-        .save-btn {
-            background: #00897b;
-        }
-
-        .active-btn {
-            background: #ef6c00;
-        }
-
-        #trackStatus {
-            grid-column: 1 / -1;
-            font-size: 14px;
-            color: #333;
-        }
-
         @media (max-width: 700px) {
             #map {
                 height: 55vh;
@@ -163,10 +126,6 @@
 
             .controls {
                 grid-template-columns: repeat(2, 1fr);
-            }
-
-            .track-panel {
-                grid-template-columns: 2fr 1fr;
             }
 
             .coordinates-container {
@@ -188,8 +147,7 @@
                 height: 50vh;
             }
 
-            .controls,
-            .track-panel {
+            .controls {
                 grid-template-columns: 1fr;
             }
         }
@@ -222,11 +180,11 @@
         placeholder="Track name"
     />
 
-    <button class="save-btn" id="saveTrackButton">
+    <button id="saveTrackButton">
         Save Track
     </button>
 
-    <button class="active-btn" id="activateTrackButton">
+    <button id="activateTrackButton">
         Use for Car
     </button>
 
@@ -290,54 +248,6 @@
         ></textarea>
     </div>
 
-</div>
-
-<div class="instructions">
-    <h3>How to use</h3>
-
-    <p>
-        <strong>1.</strong> Click <b>New Outer Bound</b> or
-        <b>New Inner Bound</b>.
-    </p>
-
-    <p>
-        <strong>2.</strong> Click on the map to place pins.
-    </p>
-
-    <p>
-        <strong>3.</strong> You can also press
-        <b>My Location</b> to use your phone's GPS location as a pin.
-    </p>
-
-    <p>
-        <strong>4.</strong> Use <b>My Location</b> multiple times to add
-        multiple GPS pins to the same boundary.
-    </p>
-
-    <p>
-        <strong>5.</strong> Add at least 3 points, then press
-        <b>Finish Current Bound</b>.
-    </p>
-
-    <p>
-        <strong>6.</strong> Create another outer or inner bound whenever
-        you want.
-    </p>
-
-    <p>
-        You can create as many outer and inner bounds as needed.
-    </p>
-
-    <p>
-        <strong>7.</strong> Type a track name and press <b>Save Track</b>.
-        Only the first finished outer bound and the first finished inner
-        bound are saved.
-    </p>
-
-    <p>
-        <strong>8.</strong> Choose a saved track and press <b>Use for Car</b>.
-        The computer connected to the car picks it up automatically.
-    </p>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
