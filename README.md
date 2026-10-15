@@ -1,67 +1,67 @@
 # Geofence
 
-EPICS EVEI geofence: draw a track's outer and inner boundaries on the website,
-and the computer connected to the Pico picks them up automatically.
+**Website:** https://renbb1016.github.io/Geofence/
+
+Draw the track boundaries on the website, and the computer connected to the
+car gets them automatically. No editing files by hand.
+
+## How it works
+
+1. You draw the outer and inner boundaries on the website and save them as a track.
+2. The track is saved online in a Supabase database.
+3. A small program on the laptop (`sync_boundaries.py`) checks the database every
+   10 seconds and copies the selected track into `coordinates.csv`.
+4. When you run `computer_end_code.py`, it sends `coordinates.csv` to the Pico like always.
 
 ```
-index.html (website)  ->  Supabase  ->  sync_boundaries.py  ->  coordinates.csv  ->  computer_end_code.py  ->  Pico
+Website  ->  Supabase  ->  sync_boundaries.py  ->  coordinates.csv  ->  computer_end_code.py  ->  Pico
 ```
 
-| File | Purpose |
-|------|---------|
-| `index.html` | Map for drawing bounds, saving named tracks and choosing the track the car uses |
-| `supabase/schema.sql` | Database tables, validation and access rules (run once) |
-| `sync_boundaries.py` | Runs in the background and keeps `coordinates.csv` up to date |
-| `computer_end_code.py` | Reads `coordinates.csv` and sends it to the Pico over serial (unchanged) |
+## Using the website
 
-## 1. Supabase setup (once)
+1. Click **+ New Outer Bound**, then click the map (or press **My Location**) to drop at least 3 pins.
+2. Click **Finish Current Bound**.
+3. Do the same with **+ New Inner Bound** (optional).
+4. Type a name in the **Track name** box and click **Save Track**.
+5. Pick the track in the dropdown and click **Use for Car**.
 
-1. Create a project at https://supabase.com.
-2. Open **SQL Editor -> New query**, paste the contents of `supabase/schema.sql` and press **Run**.
-3. Open **Project Settings -> API** and copy the **Project URL** and the **anon public** key.
-   Do not use the `service_role` key anywhere; nothing in this project needs it.
+To edit a saved track: pick it in the dropdown, click **Load Track**, drag the pins,
+then click **Save Track** again with the same name.
 
-## 2. Website
+Only the first outer bound and the first inner bound are saved.
 
-Put the Project URL and anon key into the `SUPABASE_URL` / `SUPABASE_ANON_KEY`
-constants near the top of the script in `index.html`. The anon key is meant to
-be public; what it can do is limited by the rules in `schema.sql` (it can add
-and edit tracks but cannot delete them, and invalid coordinates are rejected).
+## Running it on the laptop
 
-To host it, open the repo on GitHub: **Settings -> Pages -> Deploy from a branch -> main / (root)**.
-You can also just open `index.html` in a browser.
+First time only:
+- Copy `.env.example` to `.env` and fill in the Supabase URL and anon key.
 
-Using it:
-1. Draw an outer bound (and optionally an inner bound) and press **Finish Current Bound**.
-2. Type a track name and press **Save Track**.
-3. Press **Use for Car** to make it the active track.
-
-Only the first finished outer bound and the first finished inner bound are saved,
-because `coordinates.csv` holds one of each.
-
-## 3. Computer running the geofence program
-
-1. Copy `.env.example` to `.env` and fill in the URL and anon key.
-   Set `CSV_PATH` to the `coordinates.csv` that `computer_end_code.py` reads
-   (by default, the one in this folder). `.env` is git-ignored; never commit it.
-2. Test once:
+Every time:
+1. Start the sync program and leave it open:
    ```
-   python sync_boundaries.py --once
+   python sync_boundaries.py
    ```
-3. Keep it running in the background by starting it automatically at log-on
-   (Windows Task Scheduler):
-   - **Create Task...** -> name it `Geofence sync`
-   - **Triggers:** At log on
-   - **Actions:** Start a program
-     - Program: full path to `pythonw.exe` (run `where pythonw` to find it)
-     - Arguments: `sync_boundaries.py`
-     - Start in: this folder
-   - **Settings:** check "If the task fails, restart every 1 minute"
+2. Run the car program like normal (from this folder):
+   ```
+   python computer_end_code.py
+   ```
 
-The script checks Supabase every `POLL_SECONDS` (10 s by default) and logs to
-`sync_boundaries.log`. If the internet or Supabase is down, or the data is
-invalid, it keeps the existing CSV and retries with increasing delays (up to
-5 minutes). The CSV is replaced in one step, so `computer_end_code.py` never
-reads a half-written file.
+New boundaries go to the Pico the next time you start `computer_end_code.py`.
 
-New boundaries are sent to the Pico the next time `computer_end_code.py` is started.
+If the internet goes down, nothing breaks. The sync program keeps the last good
+`coordinates.csv` and tries again later. It also refuses to write bad or
+incomplete boundaries.
+
+Optional: to have the sync program start by itself when you log in, use Windows
+Task Scheduler to run `pythonw sync_boundaries.py` from this folder at log on.
+
+## Files
+
+| File | What it does |
+|------|--------------|
+| `index.html` | The website |
+| `sync_boundaries.py` | Copies the selected track from Supabase into `coordinates.csv` |
+| `computer_end_code.py` | Sends `coordinates.csv` to the Pico and logs GPS data |
+| `supabase/schema.sql` | Sets up the database (paste into Supabase SQL Editor and run once) |
+| `.env.example` | Template for the laptop's settings |
+
+Never put the Supabase `service_role` / secret key in any of these files.
