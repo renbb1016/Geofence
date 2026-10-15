@@ -30,6 +30,9 @@ the pin to move it.
 Saving is optional, for tracks you want to reuse:
 - **Save Track**: type a name and press Enter. Saving with an existing name updates that track.
 - **Load Track**: pick a track and press Enter. Then press **Set Final Bounds For Car** to send it.
+- **Delete a track**: in **Load Track**, pick it and click the 🗑 trash can, then **Yes, delete** (or **No** to go back).
+
+Outer bound pins are blue and inner bound pins are orange.
 
 Only the first outer bound and the first inner bound are used.
 

@@ -99,7 +99,7 @@
         }
 
         .inner-btn {
-            background: #d32f2f;
+            background: #ef6c00;
         }
 
         .location-btn {
@@ -111,7 +111,7 @@
         }
 
         .toggle-btn {
-            background: #ef6c00;
+            background: #546e7a;
         }
 
         .clear-outer-btn {
@@ -131,7 +131,34 @@
         }
 
         .load-btn {
-            background: #b26a00;
+            background: #f9a825;
+            color: #222;
+        }
+
+        .delete-btn {
+            background: #d32f2f;
+        }
+
+        /* orange pin used for inner bounds */
+        .inner-pin {
+            background: none;
+            border: none;
+        }
+
+        .modal-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+        }
+
+        .modal-row[hidden] {
+            display: none;
+        }
+
+        .trash-btn {
+            background: #d32f2f;
+            padding: 8px 12px;
+            font-size: 18px;
         }
 
         .cancel-btn {
@@ -405,7 +432,16 @@
             placeholder="Track name"
         />
 
-        <select id="modalSelect"></select>
+        <div class="modal-row" id="modalSelectRow">
+            <select id="modalSelect"></select>
+
+            <button
+                class="trash-btn"
+                id="modalDelete"
+                title="Delete this track"
+                aria-label="Delete this track"
+            >🗑</button>
+        </div>
 
         <div class="modal-error" id="modalError"></div>
 
@@ -583,11 +619,17 @@
             return;
         }
 
+        const markerOptions = {
+            draggable: true
+        };
+
+        if (currentBound.type === "inner") {
+            markerOptions.icon = innerPinIcon;
+        }
+
         const marker = L.marker(
             [lat, lng],
-            {
-                draggable: true
-            }
+            markerOptions
         );
 
         marker.addTo(map);
@@ -645,6 +687,23 @@
 
         updateStatus();
     }
+
+
+    // Orange pin for inner bounds, same size and shape
+    // as Leaflet's default blue pin
+    const innerPinIcon = L.divIcon({
+        className: "inner-pin",
+        html:
+            '<svg width="25" height="41" viewBox="0 0 25 41">' +
+            '<path d="M12.5 1C6.1 1 1 6.1 1 12.5c0 8.6 11.5 27 11.5 27' +
+            'S24 21.1 24 12.5C24 6.1 18.9 1 12.5 1z" ' +
+            'fill="#ef6c00" stroke="#a84a00" stroke-width="1.5"/>' +
+            '<circle cx="12.5" cy="12.5" r="4.5" fill="white"/>' +
+            '</svg>',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        tooltipAnchor: [16, -28]
+    });
 
 
     // ==========================================
@@ -739,7 +798,7 @@
         if (bound.type === "outer") {
             polygonColor = "#1976d2";
         } else {
-            polygonColor = "#d32f2f";
+            polygonColor = "#ef6c00";
         }
 
 
@@ -1340,11 +1399,20 @@
     // SAVE / LOAD POPUP
     // ==========================================
 
+    const modalSelectRow = document.getElementById("modalSelectRow");
+    const modalCancel = document.getElementById("modalCancel");
+    const modalDelete = document.getElementById("modalDelete");
+
+    // The track waiting for "Yes, delete"
+    let trackToDelete = null;
+
+
     function openModal(mode) {
 
         modalMode = mode;
         modalError.textContent = "";
         modalConfirm.disabled = false;
+        modalCancel.textContent = "Cancel";
 
         if (mode === "save") {
 
@@ -1353,7 +1421,7 @@
             modalConfirm.className = "save-btn";
 
             modalName.hidden = false;
-            modalSelect.hidden = true;
+            modalSelectRow.hidden = true;
 
             modalName.value = currentTrackName;
 
@@ -1364,7 +1432,7 @@
             modalConfirm.className = "load-btn";
 
             modalName.hidden = true;
-            modalSelect.hidden = false;
+            modalSelectRow.hidden = false;
         }
 
         modal.hidden = false;
@@ -1494,43 +1562,137 @@
         });
 
 
+    // Fill the dropdown with the saved tracks
+    function showTrackList(message) {
+
+        modalSelect.innerHTML = "";
+
+        savedTracks.forEach(function (track) {
+
+            const option = document.createElement("option");
+
+            option.value = track.id;
+            option.textContent = track.name;
+
+            modalSelect.appendChild(option);
+        });
+
+        const empty = savedTracks.length === 0;
+
+        modalConfirm.disabled = empty;
+        modalDelete.disabled = empty;
+
+        modalError.textContent =
+            message || (empty ? "No saved tracks yet." : "");
+
+        if (!empty) {
+            modalSelect.focus();
+        }
+    }
+
+
+    async function openLoadModal(message) {
+
+        openModal("load");
+
+        modalSelect.innerHTML = "";
+        modalError.textContent = "Loading tracks...";
+        modalConfirm.disabled = true;
+        modalDelete.disabled = true;
+
+        const problem = await refreshTracks();
+
+        if (problem) {
+            modalError.textContent =
+                "Could not load tracks: " + problem;
+            return;
+        }
+
+        showTrackList(message);
+    }
+
+
     document
         .getElementById("loadTrackButton")
-        .addEventListener("click", async function () {
+        .addEventListener("click", function () {
 
-            openModal("load");
-
-            modalSelect.innerHTML = "";
-            modalError.textContent = "Loading tracks...";
-            modalConfirm.disabled = true;
-
-            const problem = await refreshTracks();
-
-            if (problem) {
-                modalError.textContent =
-                    "Could not load tracks: " + problem;
-                return;
-            }
-
-            if (savedTracks.length === 0) {
-                modalError.textContent = "No saved tracks yet.";
-                return;
-            }
-
-            savedTracks.forEach(function (track) {
-
-                const option = document.createElement("option");
-
-                option.value = track.id;
-                option.textContent = track.name;
-
-                modalSelect.appendChild(option);
-            });
-
-            modalError.textContent = "";
-            modalConfirm.disabled = false;
-            modalSelect.focus();
+            openLoadModal();
         });
+
+
+    // ==========================================
+    // DELETE A SAVED TRACK
+    // ==========================================
+
+    // Trash can: ask "are you sure?" in the same popup
+    modalDelete.addEventListener("click", function () {
+
+        const track = savedTracks.find(function (t) {
+            return t.id === modalSelect.value;
+        });
+
+        if (!track) {
+            return;
+        }
+
+        trackToDelete = track;
+        modalMode = "delete";
+
+        modalTitle.textContent = `Delete "${track.name}"?`;
+        modalSelectRow.hidden = true;
+        modalError.textContent = "This can't be undone.";
+
+        modalConfirm.textContent = "Yes, delete";
+        modalConfirm.className = "delete-btn";
+        modalConfirm.disabled = false;
+
+        modalCancel.textContent = "No";
+        modalCancel.focus();
+    });
+
+
+    // "No": go back to the track list
+    function backToTrackList() {
+
+        trackToDelete = null;
+
+        openModal("load");
+        showTrackList();
+    }
+
+
+    async function deleteTrack() {
+
+        const track = trackToDelete;
+
+        modalConfirm.disabled = true;
+        modalError.textContent = "Deleting...";
+
+        const { data, error } = await db
+            .from("tracks")
+            .delete()
+            .eq("id", track.id)
+            .select("id");
+
+        if (error || data.length === 0) {
+
+            modalConfirm.disabled = false;
+
+            modalError.textContent =
+                "Could not delete: " +
+                (error ? error.message : "the database does not allow it yet.");
+
+            return;
+        }
+
+        if (currentTrackName === track.name) {
+            currentTrackName = "";
+        }
+
+        trackToDelete = null;
+
+        await openLoadModal(`Deleted "${track.name}".`);
+    }
 
 
     modalConfirm.addEventListener("click", function () {
@@ -1539,25 +1701,40 @@
             saveTrack();
         } else if (modalMode === "load") {
             loadTrack();
+        } else if (modalMode === "delete") {
+            deleteTrack();
         }
     });
 
 
-    document
-        .getElementById("modalCancel")
-        .addEventListener("click", closeModal);
+    function cancelModal() {
+
+        if (modalMode === "delete") {
+            backToTrackList();
+        } else {
+            closeModal();
+        }
+    }
 
 
-    // Enter confirms, Escape closes
+    modalCancel.addEventListener("click", cancelModal);
+
+
+    // Enter confirms, Escape cancels.
+    // When deleting, Enter only presses the focused button
+    // so a track is never deleted by accident.
     modal.addEventListener("keydown", function (event) {
 
-        if (event.key === "Enter" && !modalConfirm.disabled) {
+        if (event.key === "Enter" &&
+            modalMode !== "delete" &&
+            !modalConfirm.disabled) {
+
             event.preventDefault();
             modalConfirm.click();
         }
 
         if (event.key === "Escape") {
-            closeModal();
+            cancelModal();
         }
     });
 

@@ -96,6 +96,14 @@ alter table public.active_track
     add constraint active_track_name_length
         check (name is null or char_length(name) <= 80);
 
+-- Deleting a saved track must not be blocked by the old track_id link
+alter table public.active_track
+    drop constraint if exists active_track_track_id_fkey;
+
+alter table public.active_track
+    add constraint active_track_track_id_fkey
+        foreign key (track_id) references public.tracks(id) on delete set null;
+
 -- Keep updated_at current
 create or replace function public.touch_updated_at()
 returns trigger
@@ -119,9 +127,9 @@ create trigger active_track_touch
 
 -- ------------------------------------------------------------------
 -- Row Level Security
--- Anyone with the site (anon key) can read, add and edit tracks and pick
--- the active track. No DELETE policies exist, so rows cannot be deleted
--- from the website. The service-role key is not needed by any component.
+-- Anyone with the site (anon key) can read, add, edit and delete saved
+-- tracks, and set the boundaries the car uses. The active_track row itself
+-- cannot be deleted. The service-role key is not needed by any component.
 -- ------------------------------------------------------------------
 alter table public.tracks       enable row level security;
 alter table public.active_track enable row level security;
@@ -129,6 +137,7 @@ alter table public.active_track enable row level security;
 drop policy if exists "tracks read"   on public.tracks;
 drop policy if exists "tracks insert" on public.tracks;
 drop policy if exists "tracks update" on public.tracks;
+drop policy if exists "tracks delete" on public.tracks;
 
 create policy "tracks read"   on public.tracks
     for select to anon, authenticated using (true);
@@ -136,6 +145,8 @@ create policy "tracks insert" on public.tracks
     for insert to anon, authenticated with check (true);
 create policy "tracks update" on public.tracks
     for update to anon, authenticated using (true) with check (true);
+create policy "tracks delete" on public.tracks
+    for delete to anon, authenticated using (true);
 
 drop policy if exists "active read"   on public.active_track;
 drop policy if exists "active update" on public.active_track;
@@ -145,6 +156,8 @@ create policy "active read"   on public.active_track
 create policy "active update" on public.active_track
     for update to anon, authenticated using (id = 1) with check (id = 1);
 
--- Belt and braces: remove delete/truncate rights from public roles
-revoke delete, truncate on public.tracks       from anon, authenticated;
+-- Saved tracks can be deleted one at a time from the website.
+-- Nobody can wipe a whole table or delete the active_track row.
+grant  delete           on public.tracks       to   anon, authenticated;
+revoke truncate         on public.tracks       from anon, authenticated;
 revoke delete, truncate on public.active_track from anon, authenticated;
