@@ -27,6 +27,31 @@
             color: white;
             text-align: center;
             padding: 15px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            grid-template-areas: "car title using";
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-title {
+            grid-area: title;
+        }
+
+        .car-btn {
+            grid-area: car;
+            justify-self: start;
+            background: #2e7d32;
+            font-weight: bold;
+        }
+
+        #trackStatus {
+            grid-area: using;
+            justify-self: end;
+            text-align: right;
+            font-size: 14px;
+            color: #ddd;
+            white-space: pre-line;
         }
 
         header h1 {
@@ -76,15 +101,124 @@
         }
 
         .location-btn {
-            background: #388e3c;
+            background: #00838f;
         }
 
         .finish-btn {
             background: #6a1b9a;
         }
 
-        .clear-btn {
-            background: #555;
+        .toggle-btn {
+            background: #ef6c00;
+        }
+
+        .clear-outer-btn {
+            background: #5d4037;
+        }
+
+        .clear-inner-btn {
+            background: #ad1457;
+        }
+
+        .clear-all-btn {
+            background: #424242;
+        }
+
+        .save-btn {
+            background: #3949ab;
+        }
+
+        .load-btn {
+            background: #b26a00;
+        }
+
+        .cancel-btn {
+            background: #757575;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .track-buttons {
+            padding: 12px 12px 0;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            background: white;
+        }
+
+        /* the little x next to each pin */
+        .leaflet-tooltip.pin-delete {
+            background: #d32f2f;
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 18px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+
+        .leaflet-tooltip.pin-delete::before {
+            display: none;
+        }
+
+        /* popup for saving / loading tracks */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 2000;
+        }
+
+        .modal-overlay[hidden] {
+            display: none;
+        }
+
+        .modal-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-card h3 {
+            margin-top: 0;
+        }
+
+        .modal-card input,
+        .modal-card select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #bbb;
+            border-radius: 6px;
+        }
+
+        .modal-error {
+            color: #d32f2f;
+            font-size: 14px;
+            min-height: 20px;
+            margin: 8px 0;
+        }
+
+        .modal-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
         }
 
         .coordinates-container {
@@ -140,6 +274,13 @@
             header h1 {
                 font-size: 20px;
             }
+
+            header {
+                grid-template-columns: auto 1fr;
+                grid-template-areas:
+                    "title title"
+                    "car using";
+            }
         }
 
         @media (max-width: 400px) {
@@ -157,38 +298,29 @@
 <body>
 
 <header>
-    <h1>EPICS EVEI Geofence</h1>
-    <div id="status">Ready — choose a bound type</div>
+    <button class="car-btn" id="activateTrackButton">
+        Use for Car
+    </button>
+
+    <div class="header-title">
+        <h1>EPICS EVEI Geofence</h1>
+        <div id="status">Ready — choose a bound type</div>
+    </div>
+
+    <div id="trackStatus">Connecting...</div>
 </header>
 
 <div id="map"></div>
 
-<div class="track-panel">
+<div class="track-buttons">
 
-    <select id="trackSelect">
-        <option value="">Saved tracks...</option>
-    </select>
-
-    <button id="loadTrackButton">
-        Load Track
-    </button>
-
-    <input
-        id="trackName"
-        type="text"
-        maxlength="80"
-        placeholder="Track name"
-    />
-
-    <button id="saveTrackButton">
+    <button class="save-btn" id="saveTrackButton">
         Save Track
     </button>
 
-    <button id="activateTrackButton">
-        Use for Car
+    <button class="load-btn" id="loadTrackButton">
+        Load Track
     </button>
-
-    <div id="trackStatus">Connecting to database...</div>
 
 </div>
 
@@ -210,19 +342,19 @@
         📍 My Location
     </button>
 
-    <button id="toggleButton">
+    <button class="toggle-btn" id="toggleButton">
         Show / Hide Pins
     </button>
 
-    <button class="clear-btn" id="clearOuterButton">
+    <button class="clear-outer-btn" id="clearOuterButton">
         Clear Outer Bounds
     </button>
 
-    <button class="clear-btn" id="clearInnerButton">
+    <button class="clear-inner-btn" id="clearInnerButton">
         Clear Inner Bounds
     </button>
 
-    <button class="clear-btn" id="clearAllButton">
+    <button class="clear-all-btn" id="clearAllButton">
         Clear Everything
     </button>
 
@@ -248,6 +380,33 @@
         ></textarea>
     </div>
 
+</div>
+
+<div class="modal-overlay" id="modal" hidden>
+    <div
+        class="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modalTitle"
+    >
+        <h3 id="modalTitle"></h3>
+
+        <input
+            id="modalName"
+            type="text"
+            maxlength="80"
+            placeholder="Track name"
+        />
+
+        <select id="modalSelect"></select>
+
+        <div class="modal-error" id="modalError"></div>
+
+        <div class="modal-buttons">
+            <button class="cancel-btn" id="modalCancel">Cancel</button>
+            <button id="modalConfirm"></button>
+        </div>
+    </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -449,7 +608,75 @@
         });
 
 
+        // Little x next to the pin to delete it
+        marker.bindTooltip("×", {
+            permanent: true,
+            interactive: true,
+            direction: "right",
+            offset: [6, -24],
+            className: "pin-delete"
+        });
+
+        marker.openTooltip();
+
+        const deleteButton = marker.getTooltip().getElement();
+
+        // Clicking the x should not also drop a new pin on the map
+        L.DomEvent.disableClickPropagation(deleteButton);
+
+        L.DomEvent.on(deleteButton, "click", function (event) {
+
+            L.DomEvent.stop(event);
+
+            deletePin(bound, marker);
+        });
+
+
         drawPolygon(currentBound);
+
+        updateCoordinates();
+
+        updateStatus();
+    }
+
+
+    // ==========================================
+    // DELETE ONE PIN
+    // ==========================================
+
+    function deletePin(bound, marker) {
+
+        map.removeLayer(marker);
+
+        bound.markers.splice(bound.markers.indexOf(marker), 1);
+
+        // A finished bound needs at least 3 points.
+        // If it drops below that, reopen it so more
+        // pins can be added.
+        if (bound.finished && bound.markers.length < 3) {
+
+            bound.finished = false;
+
+            currentBound = bound;
+            currentType = bound.type;
+        }
+
+        // Remove the bound completely once its last pin is gone
+        if (bound.markers.length === 0) {
+
+            if (bound.type === "outer") {
+                outerBounds.splice(outerBounds.indexOf(bound), 1);
+            } else {
+                innerBounds.splice(innerBounds.indexOf(bound), 1);
+            }
+
+            if (currentBound === bound) {
+                currentBound = null;
+                currentType = null;
+            }
+        }
+
+        drawPolygon(bound);
 
         updateCoordinates();
 
@@ -872,6 +1099,8 @@
         currentBound = null;
         currentType = null;
 
+        currentTrackName = "";
+
 
         updateCoordinates();
         updateStatus();
@@ -904,16 +1133,22 @@
         ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
         : null;
 
-    const trackSelect = document.getElementById("trackSelect");
-    const trackName = document.getElementById("trackName");
     const trackStatus = document.getElementById("trackStatus");
+
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalName = document.getElementById("modalName");
+    const modalSelect = document.getElementById("modalSelect");
+    const modalError = document.getElementById("modalError");
+    const modalConfirm = document.getElementById("modalConfirm");
 
     let savedTracks = [];
 
+    // Name of the track that was last saved or loaded
+    let currentTrackName = "";
 
-    function setTrackStatus(text) {
-        trackStatus.textContent = text;
-    }
+    // "save" or "load", depending on which popup is open
+    let modalMode = null;
 
 
     // Convert a finished bound to [[lat, lng], ...]
@@ -962,38 +1197,71 @@
     }
 
 
-    async function refreshTracks(selectId) {
+    // The first finished outer and inner bound on the map.
+    // Returns { outer, inner, extra } or { error }.
+    function getMapBounds() {
+
+        const finishedOuter = outerBounds.filter(function (b) {
+            return b.finished;
+        });
+
+        const finishedInner = innerBounds.filter(function (b) {
+            return b.finished;
+        });
+
+        if (finishedOuter.length === 0) {
+            return { error: "Finish an outer bound first." };
+        }
+
+        const outer = boundToPoints(finishedOuter[0]);
+
+        const inner = finishedInner.length > 0
+            ? boundToPoints(finishedInner[0])
+            : [];
+
+        const problem =
+            validatePoints(outer, 3, "Outer") ||
+            validatePoints(inner, 0, "Inner");
+
+        if (problem) {
+            return { error: problem };
+        }
+
+        return {
+            outer: outer,
+            inner: inner,
+            extra: finishedOuter.length > 1 || finishedInner.length > 1
+        };
+    }
+
+
+    function confirmExtraBounds(bounds) {
+
+        if (!bounds.extra) {
+            return true;
+        }
+
+        return confirm(
+            "Only the first finished outer bound and the first " +
+            "finished inner bound will be used. Continue?"
+        );
+    }
+
+
+    async function refreshTracks() {
 
         const { data, error } = await db
             .from("tracks")
-            .select("id, name, outer_bound, inner_bound, updated_at")
+            .select("id, name, outer_bound, inner_bound")
             .order("name");
 
         if (error) {
-            setTrackStatus("Could not load tracks: " + error.message);
-            return;
+            return error.message;
         }
 
         savedTracks = data;
 
-        trackSelect.innerHTML =
-            '<option value="">Saved tracks...</option>';
-
-        savedTracks.forEach(function (track) {
-
-            const option = document.createElement("option");
-
-            option.value = track.id;
-            option.textContent = track.name;
-
-            trackSelect.appendChild(option);
-        });
-
-        if (selectId) {
-            trackSelect.value = selectId;
-        }
-
-        await showActiveTrack();
+        return null;
     }
 
 
@@ -1001,24 +1269,195 @@
 
         const { data, error } = await db
             .from("active_track")
-            .select("track_id, updated_at, tracks(name)")
+            .select("name, outer_bound, updated_at")
             .eq("id", 1)
             .single();
 
         if (error) {
-            setTrackStatus("Could not read the active track: " + error.message);
+            trackStatus.textContent =
+                "Could not reach the database";
             return;
         }
 
-        if (!data.track_id) {
-            setTrackStatus("No track is being used by the car yet.");
+        if (!data.outer_bound || data.outer_bound.length === 0) {
+            trackStatus.textContent =
+                "Car is using: nothing yet";
             return;
         }
 
-        setTrackStatus(
-            `Car is using: ${data.tracks.name} ` +
-            `(set ${new Date(data.updated_at).toLocaleString()})`
-        );
+        trackStatus.textContent =
+            `Car is using: ${data.name || "Unsaved track"}\n` +
+            `sent ${new Date(data.updated_at).toLocaleString()}`;
+    }
+
+
+    // ==========================================
+    // USE FOR CAR
+    // ==========================================
+
+    document
+        .getElementById("activateTrackButton")
+        .addEventListener("click", async function () {
+
+            const bounds = getMapBounds();
+
+            if (bounds.error) {
+                alert(bounds.error);
+                return;
+            }
+
+            if (!confirmExtraBounds(bounds)) {
+                return;
+            }
+
+            trackStatus.textContent = "Sending to car...";
+
+            const { error } = await db
+                .from("active_track")
+                .update({
+                    name: currentTrackName || "Unsaved track",
+                    outer_bound: bounds.outer,
+                    inner_bound: bounds.inner
+                })
+                .eq("id", 1);
+
+            if (error) {
+                alert("Could not send to the car: " + error.message);
+            }
+
+            await showActiveTrack();
+        });
+
+
+    // ==========================================
+    // SAVE / LOAD POPUP
+    // ==========================================
+
+    function openModal(mode) {
+
+        modalMode = mode;
+        modalError.textContent = "";
+        modalConfirm.disabled = false;
+
+        if (mode === "save") {
+
+            modalTitle.textContent = "Name this track";
+            modalConfirm.textContent = "Save";
+            modalConfirm.className = "save-btn";
+
+            modalName.hidden = false;
+            modalSelect.hidden = true;
+
+            modalName.value = currentTrackName;
+
+        } else {
+
+            modalTitle.textContent = "Pick a track";
+            modalConfirm.textContent = "Load";
+            modalConfirm.className = "load-btn";
+
+            modalName.hidden = true;
+            modalSelect.hidden = false;
+        }
+
+        modal.hidden = false;
+
+        if (mode === "save") {
+            modalName.focus();
+        } else {
+            modalSelect.focus();
+        }
+    }
+
+
+    function closeModal() {
+        modal.hidden = true;
+        modalMode = null;
+    }
+
+
+    async function saveTrack() {
+
+        const name = modalName.value.trim();
+
+        if (!name) {
+            modalError.textContent = "Type a track name.";
+            return;
+        }
+
+        const bounds = getMapBounds();
+
+        if (bounds.error) {
+            modalError.textContent = bounds.error;
+            return;
+        }
+
+        if (!confirmExtraBounds(bounds)) {
+            return;
+        }
+
+        modalConfirm.disabled = true;
+        modalError.textContent = "Saving...";
+
+        const { error } = await db
+            .from("tracks")
+            .upsert(
+                {
+                    name: name,
+                    outer_bound: bounds.outer,
+                    inner_bound: bounds.inner
+                },
+                { onConflict: "name" }
+            );
+
+        modalConfirm.disabled = false;
+
+        if (error) {
+            modalError.textContent = "Save failed: " + error.message;
+            return;
+        }
+
+        currentTrackName = name;
+
+        closeModal();
+
+        document.getElementById("status").textContent =
+            `Saved "${name}"`;
+    }
+
+
+    function loadTrack() {
+
+        const track = savedTracks.find(function (t) {
+            return t.id === modalSelect.value;
+        });
+
+        if (!track) {
+            modalError.textContent = "Pick a track.";
+            return;
+        }
+
+        clearAllBounds();
+
+        loadBound("outer", track.outer_bound);
+        loadBound("inner", track.inner_bound);
+
+        currentTrackName = track.name;
+
+        const allBounds = outerBounds.concat(innerBounds);
+
+        if (allBounds.length > 0) {
+            map.fitBounds(
+                L.featureGroup(
+                    allBounds.map(function (b) { return b.polygon; })
+                ).getBounds()
+            );
+        }
+
+        updateCoordinates();
+        updateStatus();
+
+        closeModal();
     }
 
 
@@ -1041,155 +1480,95 @@
 
 
     document
-        .getElementById("loadTrackButton")
+        .getElementById("saveTrackButton")
         .addEventListener("click", function () {
 
-            const track = savedTracks.find(function (t) {
-                return t.id === trackSelect.value;
-            });
-
-            if (!track) {
-                alert("Choose a saved track first.");
-                return;
-            }
-
-            clearAllBounds();
-
-            loadBound("outer", track.outer_bound);
-            loadBound("inner", track.inner_bound);
-
-            trackName.value = track.name;
-
-            const allBounds = outerBounds.concat(innerBounds);
-
-            if (allBounds.length > 0) {
-                map.fitBounds(
-                    L.featureGroup(
-                        allBounds.map(function (b) { return b.polygon; })
-                    ).getBounds()
-                );
-            }
-
-            updateCoordinates();
-            updateStatus();
+            openModal("save");
         });
 
 
     document
-        .getElementById("saveTrackButton")
+        .getElementById("loadTrackButton")
         .addEventListener("click", async function () {
 
-            const name = trackName.value.trim();
+            openModal("load");
 
-            if (!name) {
-                alert("Type a track name first.");
-                return;
-            }
+            modalSelect.innerHTML = "";
+            modalError.textContent = "Loading tracks...";
+            modalConfirm.disabled = true;
 
-            const finishedOuter = outerBounds.filter(function (b) {
-                return b.finished;
-            });
-
-            const finishedInner = innerBounds.filter(function (b) {
-                return b.finished;
-            });
-
-            if (finishedOuter.length === 0) {
-                alert("Finish an outer bound before saving.");
-                return;
-            }
-
-            const outerPoints = boundToPoints(finishedOuter[0]);
-
-            const innerPoints = finishedInner.length > 0
-                ? boundToPoints(finishedInner[0])
-                : [];
-
-            const problem =
-                validatePoints(outerPoints, 3, "Outer") ||
-                validatePoints(innerPoints, 0, "Inner");
+            const problem = await refreshTracks();
 
             if (problem) {
-                alert(problem);
+                modalError.textContent =
+                    "Could not load tracks: " + problem;
                 return;
             }
 
-            if (finishedOuter.length > 1 || finishedInner.length > 1) {
-
-                const ok = confirm(
-                    "Only the first finished outer bound and the first " +
-                    "finished inner bound will be saved. Continue?"
-                );
-
-                if (!ok) {
-                    return;
-                }
-            }
-
-            setTrackStatus("Saving...");
-
-            const { data, error } = await db
-                .from("tracks")
-                .upsert(
-                    {
-                        name: name,
-                        outer_bound: outerPoints,
-                        inner_bound: innerPoints
-                    },
-                    { onConflict: "name" }
-                )
-                .select("id")
-                .single();
-
-            if (error) {
-                setTrackStatus("Save failed: " + error.message);
+            if (savedTracks.length === 0) {
+                modalError.textContent = "No saved tracks yet.";
                 return;
             }
 
-            await refreshTracks(data.id);
+            savedTracks.forEach(function (track) {
 
-            alert(
-                `Saved "${name}".\n\n` +
-                "Press Use for Car to send it to the car."
-            );
+                const option = document.createElement("option");
+
+                option.value = track.id;
+                option.textContent = track.name;
+
+                modalSelect.appendChild(option);
+            });
+
+            modalError.textContent = "";
+            modalConfirm.disabled = false;
+            modalSelect.focus();
         });
+
+
+    modalConfirm.addEventListener("click", function () {
+
+        if (modalMode === "save") {
+            saveTrack();
+        } else if (modalMode === "load") {
+            loadTrack();
+        }
+    });
 
 
     document
-        .getElementById("activateTrackButton")
-        .addEventListener("click", async function () {
+        .getElementById("modalCancel")
+        .addEventListener("click", closeModal);
 
-            const track = savedTracks.find(function (t) {
-                return t.id === trackSelect.value;
-            });
 
-            if (!track) {
-                alert("Choose a saved track first.");
-                return;
-            }
+    // Enter confirms, Escape closes
+    modal.addEventListener("keydown", function (event) {
 
-            const { error } = await db
-                .from("active_track")
-                .update({ track_id: track.id })
-                .eq("id", 1);
+        if (event.key === "Enter" && !modalConfirm.disabled) {
+            event.preventDefault();
+            modalConfirm.click();
+        }
 
-            if (error) {
-                setTrackStatus("Could not set the track: " + error.message);
-                return;
-            }
+        if (event.key === "Escape") {
+            closeModal();
+        }
+    });
 
-            await showActiveTrack();
-        });
+
+    // Clicking the dark area outside the popup closes it
+    modal.addEventListener("click", function (event) {
+
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
 
 
     if (db) {
-        refreshTracks();
+        showActiveTrack();
     } else {
 
-        setTrackStatus(
-            "Database not set up: add SUPABASE_URL and " +
-            "SUPABASE_ANON_KEY in index.html."
-        );
+        trackStatus.textContent = "Database not set up";
 
         ["loadTrackButton", "saveTrackButton", "activateTrackButton"]
             .forEach(function (id) {

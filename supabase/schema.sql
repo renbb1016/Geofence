@@ -1,9 +1,11 @@
 -- Geofence boundary storage.
 -- Run once in the Supabase dashboard: SQL Editor -> New query -> paste -> Run.
 --
+-- Safe to run again after changes; it only adds what is missing.
+--
 -- A "bound" is a JSON array of [lat, lng] pairs, e.g. [[40.431, -86.915], ...]
--- The website writes these; sync_boundaries.py reads the active track and
--- writes it to coordinates.csv in the OUTER / INNER format.
+-- The website writes these; sync_boundaries.py reads the boundaries in
+-- active_track and writes them to coordinates.csv in the OUTER / INNER format.
 
 -- ------------------------------------------------------------------
 -- Validation (same rules as the website and sync_boundaries.py)
@@ -71,6 +73,28 @@ create table if not exists public.active_track (
 insert into public.active_track (id, track_id)
 values (1, null)
 on conflict (id) do nothing;
+
+-- The boundaries the car should use, copied here by "Use for Car" so a
+-- drawing can be sent to the car without saving it as a track.
+-- An empty outer_bound means nothing has been sent yet.
+-- (track_id above is no longer used.)
+alter table public.active_track
+    add column if not exists name        text,
+    add column if not exists outer_bound jsonb not null default '[]'::jsonb,
+    add column if not exists inner_bound jsonb not null default '[]'::jsonb;
+
+alter table public.active_track
+    drop constraint if exists active_track_outer_valid,
+    drop constraint if exists active_track_inner_valid,
+    drop constraint if exists active_track_name_length;
+
+alter table public.active_track
+    add constraint active_track_outer_valid
+        check (outer_bound = '[]'::jsonb or public.is_valid_bound(outer_bound, 3)),
+    add constraint active_track_inner_valid
+        check (public.is_valid_bound(inner_bound, 0)),
+    add constraint active_track_name_length
+        check (name is null or char_length(name) <= 80);
 
 -- Keep updated_at current
 create or replace function public.touch_updated_at()

@@ -1,8 +1,8 @@
 """
 Keeps coordinates.csv in sync with the active track stored in Supabase.
 
-The website saves tracks to Supabase and marks one as active. This script
-polls Supabase, and whenever the active track's boundaries change it rewrites
+The website's "Use for Car" button stores the boundaries in Supabase. This
+script polls Supabase, and whenever those boundaries change it rewrites
 coordinates.csv in the same format computer_end_code.py already reads:
 
     OUTER
@@ -93,11 +93,11 @@ def load_config():
 # ----------------------------------------------------------------------
 
 def fetch_active_track(config):
-    """Return the active track dict, or None if no track is active."""
+    """Return the boundaries sent to the car, or None if nothing has been sent."""
     endpoint = (
         config["url"]
         + "/rest/v1/active_track"
-        + "?id=eq.1&select=track:tracks(name,outer_bound,inner_bound,updated_at)"
+        + "?id=eq.1&select=name,outer_bound,inner_bound,updated_at"
     )
     request = urllib.request.Request(endpoint, headers={
         "apikey": config["key"],
@@ -110,7 +110,13 @@ def fetch_active_track(config):
     if not isinstance(rows, list) or len(rows) != 1:
         raise ValueError(f"Unexpected response from active_track: {rows!r}")
 
-    return rows[0].get("track")
+    track = rows[0]
+
+    # Nothing has been sent from the website yet
+    if track.get("outer_bound") in (None, []):
+        return None
+
+    return track
 
 
 # ----------------------------------------------------------------------
@@ -202,7 +208,7 @@ def sync_once(config):
     """Sync one time. Returns True if the CSV was changed."""
     track = fetch_active_track(config)
     if track is None:
-        log.info("No active track selected on the website; CSV left unchanged")
+        log.info("Nothing sent to the car from the website yet; CSV left unchanged")
         return False
 
     new_text = build_csv(track)

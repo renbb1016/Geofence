@@ -7,10 +7,10 @@ car gets them automatically. No editing files by hand.
 
 ## How it works
 
-1. You draw the outer and inner boundaries on the website and save them as a track.
-2. The track is saved online in a Supabase database.
+1. You draw the outer and inner boundaries on the website and press **Use for Car**.
+2. The boundaries are stored online in a Supabase database.
 3. A small program on the laptop (`sync_boundaries.py`) checks the database every
-   10 seconds and copies the selected track into `coordinates.csv`.
+   10 seconds and copies them into `coordinates.csv`.
 4. When you run `computer_end_code.py`, it sends `coordinates.csv` to the Pico like always.
 
 ```
@@ -22,13 +22,16 @@ Website  ->  Supabase  ->  sync_boundaries.py  ->  coordinates.csv  ->  computer
 1. Click **+ New Outer Bound**, then click the map (or press **My Location**) to drop at least 3 pins.
 2. Click **Finish Current Bound**.
 3. Do the same with **+ New Inner Bound** (optional).
-4. Type a name in the **Track name** box and click **Save Track**.
-5. Pick the track in the dropdown and click **Use for Car**.
+4. Click the green **Use for Car** button at the top. The top right shows what the car is using.
 
-To edit a saved track: pick it in the dropdown, click **Load Track**, drag the pins,
-then click **Save Track** again with the same name.
+Made a mistake? Click the red **×** next to a pin to delete just that pin, or drag
+the pin to move it.
 
-Only the first outer bound and the first inner bound are saved.
+Saving is optional, for tracks you want to reuse:
+- **Save Track**: type a name and press Enter. Saving with an existing name updates that track.
+- **Load Track**: pick a track and press Enter. Then press **Use for Car** to send it.
+
+Only the first outer bound and the first inner bound are used.
 
 ## Running it on the laptop
 
