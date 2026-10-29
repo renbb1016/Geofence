@@ -1,0 +1,4 @@
+{
+    "python.terminal.useEnvFile": true,
+    "cmake.sourceDirectory": "${workspaceFolder}/pico_code"
+}

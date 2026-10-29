@@ -31,7 +31,7 @@ def initialize():
     ser = None
     while ser is None:
         try:
-            ser = serial.Serial('COM3', 115200, timeout=1) 
+            ser = serial.Serial('COM4', 115200, timeout=1, write_timeout=5)
         except:
             print("Busy Port: Closing Thonny?")
             time.sleep(1)
@@ -41,8 +41,15 @@ def initialize():
     
     # Send the START command with a carriage return
     print("Sending START signal...")
-    ser.write(b"START\r\n") 
-    
+    try:
+        ser.write(b"START\r\n")
+    except serial.SerialTimeoutException:
+        # The Pico is connected but not reading what we send (usually old firmware still
+        # running the geofence from the last run). Restarting it puts it back to waiting for START.
+        print("The Pico is not reading data. Unplug it and plug it back in (or press reset), then run this again.")
+        ser.close()
+        raise SystemExit(1)
+
     return ser
 
 def serialWrite(x, ser):
@@ -60,15 +67,15 @@ def serialWrite(x, ser):
 
     # STEP 2: Send the coordinates
     cmd = str(x) + '\r\n' 
-    print(f"\n--- Pico is ready! Sending Coordinates ---") 
+    print(f"\n--- Pico is ready! Sending Coordinates ---")
 
-    ser.write(cmd.encode('utf-8'))
-    ser.flush()
-    
+    # Send the coordinates only once, in small chunks. The Pico only reads one line,
+    # so sending them twice fills its USB buffer and write() blocks forever.
     for i in range(0, len(cmd), 64):
-        ser.write(cmd[i:i+64].encode())
+        ser.write(cmd[i:i+64].encode('utf-8'))
         time.sleep(0.05)
-        
+    ser.flush()
+
     print("--- Coordinates Sent! Waiting for sensor stream ---\n")
 
     # STEP 3: Listen forever for incoming GPS/IMU data

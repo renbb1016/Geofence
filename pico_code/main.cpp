@@ -130,6 +130,30 @@ static std::string read_stdin_line() {
     }
 }
 
+// Set when the computer sends START while we are already running the geofence
+static bool restart_requested = false;
+
+// Reads whatever the computer has sent without waiting. Once the geofence is running
+// nothing else reads the USB serial port, so without this its buffer fills up and
+// computer_end_code.py gets a "Write timeout" the next time it sends START.
+static void poll_usb_for_start() {
+    static std::string line;
+    while (true) {
+        int c = getchar_timeout_us(0);
+        if (c == PICO_ERROR_TIMEOUT) {
+            return;
+        }
+        if (c == '\r' || c == '\n') {
+            if (line.find("START") != std::string::npos) {
+                restart_requested = true;
+            }
+            line.clear();
+        } else if (line.size() < 64) {
+            line += (char)c;
+        }
+    }
+}
+
 // ---------- GPS UART receive buffer (MicroPython's rxbuf=512) ----------
 
 constexpr int GPS_RXBUF = 512;
@@ -346,11 +370,25 @@ uart_inst_t *initialize_gps() {
 // Gets Current Location
 std::pair<double, double> get_current_location(uart_inst_t *gps_uart) {
 
+    uint32_t lastDataTime = ticks_ms();
+
     // Loop continuously until we get a valid satellite fix
     while (true) {
+        poll_usb_for_start();
+        if (restart_requested) {
+            return {0, 0};
+        }
+
         std::string raw = gps_readline(gps_uart);
 
-        if (!raw.empty()) {
+        // Without this the Pico is silent forever when the GPS is not sending anything
+        if (raw.empty()) {
+            if (ticks_ms() - lastDataTime > 3000) {
+                printf("No data from GPS - check wiring (GPS TX -> GP13) and baud rate (38400)\n");
+                lastDataTime = ticks_ms();
+            }
+        } else {
+            lastDataTime = ticks_ms();
             // Decode the line, ignoring garbage bytes from electrical noise
             std::string line;
             for (char c : raw) {
@@ -360,12 +398,12 @@ std::pair<double, double> get_current_location(uart_inst_t *gps_uart) {
             }
             line = py_strip(line);
 
-            // Look specifically for the $GNGGA sentence
-            if (line.rfind("$GNGGA", 0) == 0) {
+            // Look for the GGA sentence ($GNGGA, or $GPGGA on GPS-only modules)
+            if (line.rfind("$GNGGA", 0) == 0 || line.rfind("$GPGGA", 0) == 0) {
                 std::vector<std::string> parts = py_split(line, ",");
 
                 // Safety check: Ensure the sentence isn't cut off AND has a valid lock (parts[6] != '0')
-                if (parts.size() > 6 && parts[6] != "0") {
+                if (parts.size() > 6 && parts[6] != "0" && parts[6] != "" && parts[2] != "") {
 
                     std::string lat = parts[2];
                     std::string lat_dir = parts[3];
@@ -428,6 +466,18 @@ std::pair<Polygon, Polygon> dataReceive() {
             continue;
         }
         printf("Raw Input: %s\n", value.c_str());
+        // The Pico doesn't reset when the computer reconnects, so a new START can
+        // arrive while we are already listening - say we're ready again and keep waiting
+        if (value.find("START") != std::string::npos) {
+            printf("listening...\n");
+            continue;
+        }
+        // panic() would stop the Pico reading USB, so ask for the coordinates again instead
+        if (value.find("INNER") == std::string::npos) {
+            printf("Bad coordinates (INNER is not in list)\n");
+            printf("listening...\n");
+            continue;
+        }
         break;
     }
 
@@ -536,7 +586,8 @@ int main() {
         }
     }
 
-    auto [outerPolygon, innerPolygon] = dataReceive();
+    Polygon outerPolygon, innerPolygon;
+    std::tie(outerPolygon, innerPolygon) = dataReceive();
 
     // Flash 3 times fast to signal "I am Alive!"
     for (int _ = 0; _ < 3; _++) {
@@ -555,14 +606,17 @@ int main() {
     gpio_set_function(14, GPIO_FUNC_I2C);  // SDA
 
     // Initialize the IMU using the BNO055 driver in this folder
+    printf("Starting IMU...\n");
     static BNO055 imu(i2c1);
     sensor = &imu;
+    printf("IMU ready\n");
 
     int last_val = 0xFFFF;
     (void)last_val;
 
     uart_inst_t *gps_uart = initialize_gps();  // Initializes GPS
     uart_inst_t *lcd_uart = initialize_lcd(255, 1, 255);
+    printf("GPS started, waiting for data...\n");
 
     // lcd_write(lcd_uart, "Connecting to GPS...            ");  // For 16x2 LCD
     // sleep_ms(1500); - Can add back in to display message for readability on LCD screen. The GPS sensor needs a few seconds to connect usually anyways.
@@ -589,11 +643,22 @@ int main() {
     double imu_time_interval = 0.1;  // This value can be further optimized. See IMU BNO055 documentation for minimum refresh rate.
 
     while (true) {
+        // The computer was restarted and sent START again - get the new coordinates
+        poll_usb_for_start();
+        if (restart_requested) {
+            restart_requested = false;
+            std::tie(outerPolygon, innerPolygon) = dataReceive();
+            continue;
+        }
+
         uint32_t startTime = ticks_ms();
         // imu_stuff(); Displays IMU Stuff
         double latitude_avg = 0, longitude_avg = 0;
 
         std::tie(latitude_avg, longitude_avg) = get_current_location(gps_uart);  // Gets location info
+        if (restart_requested) {
+            continue;
+        }
         uint32_t endTime = ticks_ms();
 
         double imu_velocity_x = 0;
@@ -612,6 +677,10 @@ int main() {
         }
 
         for (int i = 0; i < imu_update_points; i++) {
+            poll_usb_for_start();
+            if (restart_requested) {
+                break;
+            }
             startTime = ticks_ms();
             sleep_ms((uint32_t)(imu_time_interval * 1000));
             std::tie(latitude_avg, longitude_avg, imu_velocity_x, imu_velocity_y) = imu_update(latitude_avg, longitude_avg, imu_time_interval, startTime, imu_velocity_x, imu_velocity_y);
