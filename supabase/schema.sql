@@ -4,11 +4,11 @@
 -- Safe to run again after changes; it only adds what is missing.
 --
 -- A "bound" is a JSON array of [lat, lng] pairs, e.g. [[40.431, -86.915], ...]
--- The website writes these; sync_boundaries.py reads the boundaries in
+-- The website writes these; computer_end_code.py reads the boundaries in
 -- active_track and writes them to coordinates.csv in the OUTER / INNER format.
 
 -- ------------------------------------------------------------------
--- Validation (same rules as the website and sync_boundaries.py)
+-- Validation (same rules as the website and computer_end_code.py)
 -- ------------------------------------------------------------------
 create or replace function public.is_valid_bound(b jsonb, min_pts int)
 returns boolean

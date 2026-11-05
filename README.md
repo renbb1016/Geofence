@@ -9,12 +9,12 @@ car gets them automatically. No editing files by hand.
 
 1. You draw the outer and inner boundaries on the website and press **Set Final Bounds For Car**.
 2. The boundaries are stored online in a Supabase database.
-3. A small program on the laptop (`sync_boundaries.py`) checks the database every
-   10 seconds and copies them into `coordinates.csv`.
-4. When you run `computer_end_code.py`, it sends `coordinates.csv` to the Pico like always.
+3. When you run `computer_end_code.py` on the laptop, it copies them from the database
+   into `coordinates.csv`.
+4. It then sends `coordinates.csv` to the Pico.
 
 ```
-Website  ->  Supabase  ->  sync_boundaries.py  ->  coordinates.csv  ->  computer_end_code.py  ->  Pico
+Website  ->  Supabase  ->  computer_end_code.py  ->  coordinates.csv  ->  Pico
 ```
 
 ## Using the website
@@ -42,31 +42,23 @@ First time only:
 - Copy `.env.example` to `.env` and fill in the Supabase URL and anon key.
 
 Every time:
-1. Start the sync program and leave it open:
-   ```
-   python sync_boundaries.py
-   ```
-2. Run the car program like normal (from this folder):
-   ```
-   python computer_end_code.py
-   ```
+```
+python computer_end_code.py
+```
 
-New boundaries go to the Pico the next time you start `computer_end_code.py`.
+The boundaries are only fetched when the program starts, so restart it after
+setting new ones on the website.
 
-If the internet goes down, nothing breaks. The sync program keeps the last good
-`coordinates.csv` and tries again later. It also refuses to write bad or
-incomplete boundaries.
-
-Optional: to have the sync program start by itself when you log in, use Windows
-Task Scheduler to run `pythonw sync_boundaries.py` from this folder at log on.
+If the internet is down, the program prints a warning and sends the last saved
+`coordinates.csv`, so check for that warning if the car should be using new
+boundaries. It also refuses to save bad or incomplete boundaries.
 
 ## Files
 
 | File | What it does |
 |------|--------------|
 | `index.html` | The website |
-| `sync_boundaries.py` | Copies the selected track from Supabase into `coordinates.csv` |
-| `computer_end_code.py` | Sends `coordinates.csv` to the Pico and logs GPS data |
+| `computer_end_code.py` | Copies the selected track from Supabase into `coordinates.csv`, sends it to the Pico and logs GPS data |
 | `supabase/schema.sql` | Sets up the database (paste into Supabase SQL Editor and run once) |
 | `.env.example` | Template for the laptop's settings |
 

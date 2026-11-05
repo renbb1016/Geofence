@@ -1,6 +1,5 @@
 .env
 datalog*.txt
-sync_boundaries.log*
 .coordinates_*.tmp
 __pycache__/
 coordinates.csv
