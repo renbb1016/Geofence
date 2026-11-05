@@ -161,3 +161,16 @@ create policy "active update" on public.active_track
 grant  delete           on public.tracks       to   anon, authenticated;
 revoke truncate         on public.tracks       from anon, authenticated;
 revoke delete, truncate on public.active_track from anon, authenticated;
+
+-- ------------------------------------------------------------------
+-- Make the website see the changes right away, then list the columns of
+-- active_track as a check. The list should include name, outer_bound and
+-- inner_bound.
+-- ------------------------------------------------------------------
+notify pgrst, 'reload schema';
+
+select column_name
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'active_track'
+order by ordinal_position;
