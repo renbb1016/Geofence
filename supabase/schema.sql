@@ -6,6 +6,13 @@
 -- A "bound" is a JSON array of [lat, lng] pairs, e.g. [[40.431, -86.915], ...]
 -- The website writes these; computer_end_code.py reads the boundaries in
 -- active_track and writes them to coordinates.csv in the OUTER / INNER format.
+--
+-- What the website uses:
+--   tracks       - Save Track (save or overwrite by name), Load Track list and
+--                  preview, Load Into Editor, Delete Selected Track
+--   active_track - "Car is using" status, Send Track to Car / Set Final Bounds
+-- Only the first finished outer bound and first finished inner bound are
+-- stored; extra bounds drawn on the map stay in the browser.
 
 -- ------------------------------------------------------------------
 -- Validation (same rules as the website and computer_end_code.py)
