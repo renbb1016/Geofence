@@ -140,6 +140,7 @@
         }
 
         /* orange pin used for inner bounds */
+        .outer-pin,
         .inner-pin {
             background: none;
             border: none;
@@ -336,14 +337,277 @@
             }
         }
     </style>
+<style>:root{color-scheme:dark;--bg:#080d17;--panel:#101a2a;--line:#26364d;--text:#edf4ff}html,body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}header{background:#0b121f;border-bottom:1px solid var(--line)}header h1{letter-spacing:.12em;font-size:18px}#status,#trackStatus{color:#9db2cb}#map{height:64vh;min-height:380px}.controls,.track-buttons,.coordinates-container{background:var(--bg);gap:10px;padding:14px 18px}.controls{grid-template-columns:repeat(4,minmax(0,1fr))}.track-buttons{padding-bottom:0}.coordinate-box,.instructions{background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--text)}textarea,.modal-card input,.modal-card select{background:#091321;color:var(--text);border:1px solid var(--line);border-radius:8px}button{border:1px solid #30445f;border-radius:10px;min-height:44px;font-weight:650}button:hover{opacity:1;filter:brightness(1.2)}.car-btn{background:#56d6a0;color:#071b16}.outer-btn{background:#183c68}.inner-btn{background:#55331f}.location-btn{background:#153d47}.finish-btn{background:#28395d}.save-btn{background:#233d68}.load-btn{background:#29384b}.modal-card{background:#111d2e;color:var(--text);border:1px solid #30445f;border-radius:16px}.modal-overlay{background:#02070ecc;backdrop-filter:blur(8px)}#welcomeScreen{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;background:linear-gradient(to bottom,rgba(5,13,25,.94) 0%,rgba(5,13,25,.68) 34%,rgba(5,13,25,.34) 68%,rgba(5,13,25,.12) 100%);backdrop-filter:blur(1.5px);transition:transform .72s cubic-bezier(.22,.75,.24,1),opacity .55s,visibility .72s;touch-action:pan-y;will-change:transform}.welcome-content{text-align:center;padding:24px}.welcome-title{font-size:clamp(48px,10vw,88px);letter-spacing:.12em;font-weight:900;margin:18px 0 8px}.welcome-kicker{color:#82baff;letter-spacing:.3em;font-size:11px}.welcome-subtitle,.welcome-hint{color:#9db2cb;letter-spacing:.18em;font-size:12px}.welcome-rule{height:3px;width:52px;background:#4d9cff;margin:26px auto}.welcome-continue{margin-top:24px;background:#e8f2ff;color:#0a1728;border:0;border-radius:999px;padding:13px 26px}.dismissed{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-100%)}@media(max-width:760px){header{grid-template-columns:1fr auto;grid-template-areas:"title using" "car car";gap:9px;padding:12px}header h1{font-size:15px}.car-btn{width:100%}#map{height:54vh;min-height:320px}.controls{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px}.coordinates-container{grid-template-columns:1fr;padding:8px 10px}.track-buttons{padding:10px 10px 0}button{min-height:46px;font-size:12px;padding:10px 8px}}@media(orientation:landscape) and (max-height:560px){#map{height:58vh;min-height:220px}}
+</style>
+<style>
+/* Redesigned workspace shell */
+[hidden]{display:none!important}
+body{background:#080d17;color:#edf4ff}
+.main-menu{position:fixed;inset:0;z-index:2500;display:grid;place-items:center;padding:22px;background:linear-gradient(135deg,rgba(6,12,23,.91),rgba(10,27,47,.94)),url('https://tile.openstreetmap.org/15/5241/12663.png') center/cover}
+.menu-card{width:min(620px,100%);padding:clamp(24px,5vw,48px);border:1px solid #30445f;border-radius:24px;background:rgba(12,23,39,.94);box-shadow:0 24px 80px #0009;backdrop-filter:blur(16px)}
+.menu-eyebrow,.sidebar-eyebrow{font-size:10px;letter-spacing:.25em;color:#78b9ff;font-weight:800}
+.menu-card h2{font-size:clamp(28px,5vw,42px);margin:12px 0 8px;letter-spacing:-.04em}
+.menu-card>p,.panel-help,.panel-note{color:#9db2cb;line-height:1.55}
+.menu-actions{display:grid;gap:12px;margin:28px 0}
+.menu-choice{display:grid;grid-template-columns:46px 1fr 20px;align-items:center;gap:14px;text-align:left;padding:18px;border:1px solid #2c4664;background:#14243a;border-radius:15px;min-height:82px}
+.menu-choice:hover{border-color:#75b9ff;background:#192d48}
+.menu-choice strong,.menu-choice small{display:block}
+.menu-choice strong{font-size:16px;margin-bottom:5px}
+.menu-choice small{font-size:12px;color:#a9bdd5;font-weight:400}
+.choice-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#203f64;color:#9acbff;font-size:24px}
+.menu-load .choice-icon{background:#49351f;color:#ffbf79}
+.choice-arrow{font-size:20px;color:#85bfff}
+.menu-footnote{font-size:9px;letter-spacing:.2em;color:#6f829b}
+.workspace-grid{height:calc(100vh - 86px);min-height:540px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:0}
+#map{height:100%;min-height:0}
+.workspace-sidebar{background:#0d1726;border-left:1px solid #26364d;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:16px}
+.sidebar-topline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid #26364d}
+.sidebar-topline h2{margin:5px 0 0;font-size:20px}
+.back-menu-button{min-height:38px;padding:8px 12px;background:#17283e;border-color:#344b67}
+#createPanel .track-buttons,#createPanel .controls,#createPanel .coordinates-container{display:grid;grid-template-columns:1fr;background:transparent;padding:0;gap:9px}
+#createPanel .track-buttons{grid-template-columns:1fr 1fr}
+#createPanel .controls{grid-template-columns:1fr 1fr}
+#createPanel .coordinates-container{grid-template-columns:1fr;padding:0}
+#createPanel .coordinate-box{padding:12px}
+#createPanel .coordinate-box h3{font-size:13px;margin:0 0 8px}
+#createPanel textarea{height:105px}
+#createPanel .instructions{margin:0}
+.load-panel{display:flex;flex-direction:column;gap:12px}
+.panel-help{font-size:13px;margin:0}
+.saved-track-list{display:grid;gap:8px;max-height:42vh;overflow:auto}
+.saved-track-item{width:100%;display:flex;justify-content:space-between;align-items:center;text-align:left;background:#14243a;border:1px solid #2b405b;padding:13px;border-radius:11px}
+.saved-track-item.selected{border-color:#68b5ff;background:#19314d}
+.saved-track-item small{display:block;color:#9db2cb;font-size:11px;margin-top:4px}
+.saved-track-item .track-check{color:#83c2ff;font-size:18px}
+.empty-tracks{padding:16px;border:1px dashed #344b67;border-radius:12px;color:#9db2cb;font-size:13px}
+.load-actions{display:grid;gap:8px}
+.primary-action{background:#dcecff;color:#0b1a2c;border:0}
+.secondary-action{background:#1b3553}
+.send-action{background:#16583f;border-color:#267b5c}
+.panel-note{font-size:11px;margin:0}
+.leaflet-container{background:#101a2a}
+header{min-height:86px}
+@media(max-width:900px){
+ .workspace-grid{grid-template-columns:minmax(0,1fr) 300px}
+ .workspace-sidebar{padding:13px}
+}
+@media(max-width:700px){
+ header{min-height:0}
+ .workspace-grid{height:calc(100dvh - 104px);min-height:0;display:flex;flex-direction:column;position:relative}
+ #map{height:100%;min-height:0;flex:1}
+ .workspace-sidebar{position:absolute;z-index:700;left:10px;right:10px;bottom:10px;max-height:min(48dvh,430px);border:1px solid #40536b;border-radius:18px;padding:12px;background:rgba(10,19,32,.96);box-shadow:0 12px 40px #0008;backdrop-filter:blur(12px)}
+ .sidebar-topline{padding-bottom:8px}
+ .sidebar-topline h2{font-size:17px}
+ #createPanel .controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #createPanel .coordinates-container{max-height:120px;overflow:auto}
+ #createPanel textarea{height:75px}
+ .saved-track-list{max-height:20dvh}
+ .menu-card{border-radius:18px}
+ .menu-choice{min-height:76px;padding:14px}
+}
+@media(max-width:420px){
+ #createPanel .controls{grid-template-columns:1fr 1fr}
+ .workspace-sidebar{left:7px;right:7px;bottom:7px;padding:10px}
+}
+@media(orientation:landscape) and (max-height:560px) and (max-width:900px){
+ .workspace-grid{height:calc(100dvh - 72px);flex-direction:row}
+ #map{width:62%;height:100%}
+ .workspace-sidebar{left:auto;right:8px;top:8px;bottom:8px;width:36%;max-height:none}
+}
+</style>
+<style>
+.app-toast{position:fixed;z-index:4000;top:100px;left:50%;transform:translate(-50%,-12px);max-width:min(92vw,460px);padding:12px 18px;border:1px solid #405875;border-radius:12px;background:#14243a;color:#edf4ff;box-shadow:0 12px 36px #0008;font-size:13px;line-height:1.45;opacity:0;visibility:hidden;transition:.2s;pointer-events:none;text-align:center}
+.app-toast.visible{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.app-toast.error{border-color:#a84c58;background:#3b1d2a}
+.app-toast.success{border-color:#39866a;background:#123629}
+@media(max-width:700px){.app-toast{top:112px}}
+</style>
+<style>
+/* Reference-sketch layout: editing tools at left, map at right */
+.workspace-grid{position:relative;grid-template-columns:340px minmax(0,1fr);grid-template-areas:"sidebar map"}
+#workspaceSidebar{grid-area:sidebar;border-left:0;border-right:1px solid #26364d}
+#map{grid-area:map}
+.map-pin-toggle{position:absolute;z-index:900;top:16px;right:18px;width:48px;height:48px;min-height:48px;padding:0;display:grid;place-items:center;border:1px solid rgba(210,226,246,.45);border-radius:14px;background:rgba(9,19,33,.92);color:#fff;box-shadow:0 5px 18px #0007;backdrop-filter:blur(8px)}
+.map-pin-toggle:hover{background:#172b43}
+.pin-symbol{font-size:23px;line-height:1;position:relative}
+.map-pin-toggle[aria-pressed="false"] .pin-symbol:after{content:"";position:absolute;left:-5px;top:10px;width:34px;height:3px;border-radius:2px;background:#ff6868;transform:rotate(-48deg);box-shadow:0 0 2px #080d17}
+.map-finish-button,.map-location-button{position:absolute;z-index:1250;right:18px;min-height:48px;border:1px solid rgba(210,226,246,.45);border-radius:14px;background:rgba(9,19,33,.94);color:#fff;box-shadow:0 5px 18px #0007;backdrop-filter:blur(8px)}
+.map-finish-button{top:16px;padding:0 20px;background:#dcecff;color:#0b1a2c;font-weight:900;letter-spacing:.08em}
+.sidebar-topline{justify-content:flex-start!important;gap:0!important;align-items:center!important;padding:0 0 14px!important}
+.sidebar-topline h2{margin:0!important;padding:0 0 0 12px!important;font-size:20px!important;font-weight:750}
+.back-menu-button{width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;padding:0!important;border-radius:8px!important;display:grid!important;place-items:center!important;font-size:25px!important;font-weight:400!important;line-height:1}
+#workspaceHeading{letter-spacing:-.02em}
+#locationButton{display:none!important}
+body.create-active #locationButton:not([hidden]){display:grid!important}
+body.create-active #finishButton{display:block!important}
+body.load-active #locationButton,body.load-active #finishButton{display:none!important}
+.map-location-button{top:76px;width:48px;height:48px;padding:0;display:grid;place-items:center;font-size:27px}
+.map-location-button span{display:block;transform:rotate(180deg)}
+.map-finish-button[hidden],.map-location-button[hidden]{display:none!important}
+@media(max-width:700px){.workspace-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"map"}#workspaceSidebar{grid-area:auto}.map-pin-toggle{top:14px;right:14px}.map-finish-button{top:14px;right:72px}.map-location-button{top:72px;right:14px}}
+</style>
+<style>
+/* The actual Leaflet map is the welcome-screen backdrop; the black gradient is layered above it. */
+body.welcome-active{overflow:hidden}
+body.welcome-active header{display:none}
+body.welcome-active #workspaceGrid{display:block!important;position:fixed;inset:0;width:100vw;height:100vh;min-height:0;z-index:1;grid-template-columns:1fr;grid-template-areas:"map"}
+body.welcome-active #map{position:absolute;inset:0;width:100%;height:100%;min-height:0}
+body.welcome-active #workspaceSidebar{display:none}
+#welcomeScreen{z-index:3000}
+</style>
+<style>
+/* Stable Leaflet geometry: keep the map full-viewport in every screen.
+   Controls overlay it, so screen transitions never move the map's coordinate origin. */
+#workspaceGrid{display:block!important;position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;min-height:0!important;margin:0!important;padding:0!important;z-index:0!important;overflow:hidden}
+#map{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important}
+#workspaceSidebar{position:absolute!important;z-index:1100!important;left:0!important;top:86px!important;bottom:0!important;width:340px!important;max-height:none!important;overflow-y:auto!important;border-left:0!important;border-right:1px solid #26364d!important;border-radius:0!important}
+#toggleButton{position:absolute!important;z-index:1200!important;top:102px!important;right:18px!important;left:auto!important}
+body.welcome-active #workspaceSidebar,body.menu-active #workspaceSidebar{display:none!important}
+body.welcome-active header,body.menu-active header{display:none!important}
+body.welcome-active #workspaceGrid,body.menu-active #workspaceGrid{display:block!important}
+@media(max-width:700px){
+ #workspaceSidebar{left:8px!important;right:8px!important;top:auto!important;bottom:8px!important;width:auto!important;max-height:min(48dvh,430px)!important;border:1px solid #40536b!important;border-radius:18px!important;padding:12px!important;background:rgba(10,19,32,.96)!important}
+ #toggleButton{top:14px!important;right:14px!important}
+ body.welcome-active #workspaceSidebar,body.menu-active #workspaceSidebar{display:none!important}
+}
+/* Welcome and menu layout based on the team's hand-drawn UI reference */
+#welcomeScreen{background:linear-gradient(to bottom,rgba(2,7,15,.99) 0%,rgba(2,7,15,.91) 42%,rgba(2,7,15,.66) 74%,rgba(2,7,15,.28) 100%);backdrop-filter:none}
+.welcome-content{position:absolute;top:34%;left:50%;transform:translate(-50%,-50%);width:min(92vw,760px);padding:20px;text-align:center}
+.welcome-title{font-size:clamp(48px,9vw,86px);letter-spacing:.16em;font-weight:850;margin:0 0 12px;color:#f4f8ff;text-shadow:0 4px 24px #0008}
+.welcome-subtitle{font-size:clamp(11px,1.6vw,14px);letter-spacing:.28em;color:#e3ecfa}
+.welcome-hint{position:fixed;top:72vh;left:0;width:100%;font-size:12px;font-weight:700;letter-spacing:.25em;color:#fff;text-shadow:0 2px 14px #000,0 0 8px #000}
+.welcome-continue{position:absolute;left:50%;bottom:7vh;transform:translateX(-50%);width:44px;height:44px;min-height:44px;padding:0;border:1px solid #dceaffaa;border-radius:50%;background:rgba(3,10,20,.86);color:#fff;font-size:22px;backdrop-filter:blur(8px)}
+/* Keep the map as the full-screen backdrop on the second menu screen. */
+body.menu-active{overflow:hidden}
+body.menu-active header{display:none}
+body.menu-active #workspaceGrid{display:block!important;position:fixed;inset:0;width:100vw;height:100vh;min-height:0;z-index:1;grid-template-columns:1fr;grid-template-areas:"map"}
+body.menu-active #map{position:absolute;inset:0;width:100%;height:100%;min-height:0}
+body.menu-active #workspaceSidebar{display:none}
+.main-menu{position:fixed;inset:0;z-index:2500;display:grid;place-items:center;padding:22px;background:rgba(3,9,18,.18);backdrop-filter:none}
+.menu-card{width:min(680px,100%);padding:26px 22px;border:0;border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none;text-align:center;overflow:visible}
+.menu-prompt{font-size:clamp(15px,2vw,19px);font-weight:700;letter-spacing:.13em;color:#fff;text-shadow:0 2px 14px #000;margin:0 0 34px}
+.menu-actions{display:flex;justify-content:center;align-items:center;gap:clamp(14px,4vw,34px);margin:0}
+.menu-choice{display:flex;align-items:center;justify-content:center;gap:10px;width:min(220px,42vw);min-height:62px;padding:14px 18px;border:1px solid #d0e0f477;border-radius:9px;background:rgba(5,15,28,.84);color:#f4f8ff;text-align:center;box-shadow:0 8px 28px #0007;backdrop-filter:blur(8px)}
+.menu-choice strong{font-size:15px;white-space:nowrap}
+.menu-choice .choice-icon{width:auto;height:auto;background:transparent;color:#a8ceff;font-size:20px}
+.menu-load .choice-icon{background:transparent;color:#ffd09a}
+.menu-choice:hover{border-color:#9bcaff;background:rgba(15,36,60,.94)}
+@media(max-width:520px){.menu-actions{flex-direction:column;gap:14px}.menu-choice{width:min(280px,82vw)}.welcome-content{top:35%}.welcome-hint{top:70vh}}
+</style>
+<style>/* Hide Leaflet's default + / - zoom buttons */
+.leaflet-control-zoom{display:none!important}
+</style>
+<style>
+/* Editor toolbar follows the sketch: bound selection, coordinates, then clear. */
+#workspaceSidebar{top:12px!important}
+#workspaceSidebar .sidebar-topline{padding-top:0!important}
+#createPanel .controls{display:flex!important;flex-direction:column!important;gap:10px!important}
+.bound-step-buttons,.utility-step-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bound-step-buttons button,.utility-step-buttons button{width:100%;min-width:0}
+#newOuterButton,#newInnerButton{min-height:48px;font-size:14px}
+#newOuterButton.active-step{outline:2px solid #78baff;box-shadow:0 0 0 3px #78baff33;background:#24558c}
+#newInnerButton.active-step{outline:2px solid #ffb36d;box-shadow:0 0 0 3px #ffb36d33;background:#754322}
+.step-toggle-btn{background:#17283e;color:#eaf3ff;padding:10px 12px}
+.clear-step-options{display:grid;grid-template-columns:1fr;gap:7px;padding:10px;border:1px solid #344963;border-radius:10px;background:#0a1422}
+.clear-step-options button{min-height:38px}
+#coordinatesPanel[hidden],#clearStepOptions[hidden],#finishButton[hidden],#locationButton[hidden]{display:none!important}
+#coordinatesPanel{display:grid!important;grid-template-columns:1fr!important;padding:0!important;gap:8px!important}
+#coordinatesPanel textarea{height:90px!important}
+@media(max-width:700px){#workspaceSidebar{top:auto!important;bottom:8px!important}#coordinatesPanel textarea{height:65px!important}}
+</style>
+<style>
+/* Vertical, one-step-at-a-time toolbar based on the handwritten interaction notes. */
+#createPanel .controls{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:9px!important}
+#createPanel .controls button{width:100%!important;min-height:44px!important;text-align:left!important}
+.bound-step-buttons,.utility-step-buttons{display:flex!important;flex-direction:column!important;gap:9px!important}
+.editor-substep-header{display:flex;align-items:center;gap:12px;width:100%;margin-bottom:5px}
+.editor-substep-header[hidden]{display:none!important}
+.editor-substep-header h3{margin:0;font-size:19px;font-weight:800;color:#edf4ff}
+.editor-back-arrow{display:grid!important;place-items:center;width:38px!important;min-width:38px;height:38px!important;min-height:38px!important;padding:0!important;background:#17283e;color:#edf5ff;border:1px solid #344b67;border-radius:10px!important;text-align:center;font-size:22px!important;font-weight:700}
+#createPanel.step-outer .bound-step-buttons button:not(#newOuterButton),#createPanel.step-inner .bound-step-buttons button:not(#newInnerButton){display:none!important}
+#createPanel.step-outer .utility-step-buttons,#createPanel.step-inner .utility-step-buttons{display:none!important}
+#createPanel.step-outer .editor-substep-header,#createPanel.step-inner .editor-substep-header,#createPanel.step-coordinates .editor-substep-header,#createPanel.step-clear .editor-substep-header{display:flex}
+#createPanel.step-outer .bound-step-buttons,#createPanel.step-inner .bound-step-buttons{display:none!important}
+#createPanel.step-outer .utility-step-buttons,#createPanel.step-inner .utility-step-buttons{display:none!important}
+#createPanel.step-coordinates .controls>*:not(.editor-substep-header),#createPanel.step-clear .controls>*:not(.editor-substep-header){display:none!important}
+#createPanel.step-coordinates #coordinatesPanel{display:grid!important}
+#createPanel.step-clear #clearStepOptions{display:grid!important}
+#coordinatesPanel[hidden],#clearStepOptions[hidden]{display:none!important}
+#createPanel:not(.step-coordinates) #coordinatesPanel{display:none!important}
+#createPanel:not(.step-clear) #clearStepOptions{display:none!important}
+#boundPointsList[hidden]{display:none!important}
+#workspaceSidebar{top:12px!important}
+</style>
+<style>
+body.menu-active #toggleButton,
+body.menu-active #locationButton,
+body.menu-active #finishButton{display:none!important}
+body.menu-active #workspaceSidebar{display:none!important}
+</style>
+<style>
+/* Fade away only the unused menu choice and prompt; keep the selected choice still. */
+.menu-prompt,.menu-choice{transition:opacity .38s ease}
+.main-menu.choice-create #menuLoadButton,
+.main-menu.choice-load #menuCreateButton,
+.main-menu.choice-create .menu-prompt,
+.main-menu.choice-load .menu-prompt{opacity:0;pointer-events:none}
+
+/* Desktop editor tools float over the map in a rounded panel, inset evenly. */
+@media(min-width:701px){
+  body.create-active #workspaceGrid,
+  body.load-active #workspaceGrid{
+    display:block!important;position:relative;height:calc(100vh - 86px);
+    min-height:540px;grid-template-columns:1fr;grid-template-areas:"map";
+  }
+  body.create-active #map,
+  body.load-active #map{position:absolute;inset:0;width:100%;height:100%}
+  body.create-active #workspaceSidebar,
+  body.load-active #workspaceSidebar{
+    position:fixed!important;z-index:700;top:50%!important;left:18px!important;
+    right:auto!important;bottom:auto!important;transform:translateY(-50%);
+    width:320px;height:fit-content;max-height:calc(100dvh - 36px);
+    box-sizing:border-box;border:1px solid #40536b;border-radius:18px!important;
+    padding:16px;background:rgba(10,19,32,.96);
+    box-shadow:0 12px 40px #0008;backdrop-filter:blur(12px);
+    overflow:auto;
+  }
+}
+</style>
+<style>
+/* Bound creation controls and per-bound point list. */
+.finish-track-button{flex:0 0 auto;width:auto;min-width:0;min-height:38px;height:38px;margin:0 0 0 auto;padding:0 12px;border:1px solid #8fbaff;border-radius:10px;background:#dcecff;color:#0b1a2c;font-size:12px;font-weight:850;letter-spacing:.02em;white-space:nowrap}
+.finish-track-button[hidden]{display:none!important}
+.sidebar-topline{display:flex!important;align-items:center!important;gap:0!important}
+#workspaceHeading{flex:1}
+.toolbar-finish-button{margin-left:auto;min-height:40px;padding:0 13px;border:1px solid #8fbaff;border-radius:9px;background:#dcecff;color:#0b1a2c;font-size:12px;font-weight:850;white-space:nowrap}
+.toolbar-finish-button[hidden]{display:none!important}
+#locationButton{display:none!important}
+body.create-active #locationButton:not([hidden]){display:grid!important}
+body.create-active #finishButton:not([hidden]){display:block!important}
+.bound-points-list{display:grid;gap:5px;margin:2px 0 6px;padding:9px;border:1px solid #344963;border-radius:10px;background:#091523}
+.bound-points-list[hidden]{display:none!important}
+.bound-point-row{display:flex;align-items:center;justify-content:flex-start;gap:6px;min-width:0;color:#dce9fa;font-size:11px;white-space:nowrap}
+.bound-point-row small{color:#9db2cb;white-space:nowrap;font-size:11px}
+.bound-point-remove{flex:0 0 18px;min-height:18px!important;width:18px!important;height:18px;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:#ff5d68!important;font-size:17px!important;font-weight:800;line-height:16px}
+#locationButton svg{width:27px;height:27px;display:block}
+.map-location-button span{display:none!important}
+body.create-active #toggleButton{top:18px!important;right:18px!important}
+body.create-active #locationButton:not([hidden]){top:76px!important;right:18px!important}
+body.create-active #finishButton[hidden]{display:none!important}
+@media(max-width:700px){
+  body.create-active #toggleButton{top:auto!important;bottom:calc(min(48dvh,430px) + 76px)!important;right:14px!important}
+  body.create-active #locationButton:not([hidden]){top:auto!important;bottom:calc(min(48dvh,430px) + 18px)!important;right:14px!important}
+}
+</style>
 </head>
 
-<body>
+<body class="welcome-active">
+<div id="welcomeScreen" tabindex="0" aria-label="Swipe up to continue"><div class="welcome-content"><div class="welcome-title">GEOFENCE</div><div class="welcome-subtitle">PROVIDED BY EPICS EVEI</div><div class="welcome-hint">SWIPE UP TO CONTINUE</div></div><button class="welcome-continue" id="welcomeContinue" aria-label="Continue">↑</button></div>
+
+<div id="appToast" class="app-toast" role="status" aria-live="polite"></div>
 
 <header>
-    <button class="car-btn" id="activateTrackButton">
-        Set Final Bounds For Car
-    </button>
+    <button class="car-btn" id="activateTrackButton" hidden aria-hidden="true" tabindex="-1">Send selected track</button>
 
     <div class="header-title">
         <h1>EPICS EVEI Geofence</h1>
@@ -353,57 +617,66 @@
     <div id="trackStatus">Connecting...</div>
 </header>
 
+<div id="mainMenu" class="main-menu" hidden>
+    <div class="menu-card">
+      <div class="menu-prompt">WHAT WOULD YOU LIKE TO DO?</div>
+      <div class="menu-actions">
+        <button id="menuCreateButton" class="menu-choice menu-create"><span class="choice-icon">＋</span><strong>Create Track</strong></button>
+        <button id="menuLoadButton" class="menu-choice menu-load"><span class="choice-icon">↗</span><strong>Load Track</strong></button>
+      </div>
+    </div>
+  </div>
+
+<div id="workspaceGrid" class="workspace-grid">
 <div id="map"></div>
-
+<aside id="workspaceSidebar" class="workspace-sidebar">
+  <div class="sidebar-topline">
+    <button id="backToMenuButton" class="back-menu-button" aria-label="Back to menu">&lt;</button>
+    <h2 id="workspaceHeading">Create Track</h2>
+  
+        <button id="finishTrackButton" class="finish-track-button" type="button">Finish Track</button>
+  </div>
+  <div id="loadPanel" class="load-panel" hidden>
+    <p class="panel-help">Choose a saved track to preview it on the map.</p>
+    <div id="savedTrackList" class="saved-track-list"><div class="empty-tracks">Loading saved tracks…</div></div>
+    <div class="load-actions">
+      <button id="loadSelectedTrackButton" class="primary-action" disabled>Load Into Editor</button>
+      <button id="deleteSelectedTrackButton" class="delete-btn" disabled>Delete Selected Track</button>
+      <button id="sendSelectedTrackButton" class="send-action" disabled>Send Track to Car</button>
+    </div>
+    <p class="panel-note">Sending a track updates the course the car is set to use. You’ll be asked to confirm first.</p>
+  </div>
+  <div id="createPanel">
 <div class="track-buttons">
-
-    <button class="save-btn" id="saveTrackButton">
-        Save Track
-    </button>
-
-    <button class="load-btn" id="loadTrackButton">
-        Load Track
-    </button>
-
+    <button class="load-btn" id="loadTrackButton">Load Track</button>
 </div>
 
-<div class="controls">
+<div class="controls" id="editorControls">
+    <div class="editor-substep-header" id="editorSubstepHeader" hidden>
+      <button id="editorStepBack" class="editor-back-arrow" type="button" aria-label="Back to tools">&lt;</button>
+      <h3 id="editorSubstepTitle">Outer Bound</h3>
+      <button id="addBoundButton" class="toolbar-finish-button add-bound-button" type="button" hidden aria-label="Add a new bound" title="Add a new bound">+</button>
+      <button id="finishButton" class="toolbar-finish-button" type="button" hidden>Finish Bound</button>
+    </div>
+    <div class="bound-step-buttons">
+      <button class="outer-btn" id="newOuterButton">Outer Bounds</button>
+      <button class="inner-btn" id="newInnerButton">Inner Bounds</button>
+    </div>
+    <div id="boundSelectionList" class="bound-selection-list" hidden aria-live="polite"></div>
+    <div id="boundPointsList" class="bound-points-list" hidden aria-live="polite"></div>
+    <div class="utility-step-buttons">
+      <button class="step-toggle-btn" id="toggleCoordinatesButton" type="button" aria-expanded="false">Show Coordinates</button>
+      <button class="step-toggle-btn" id="toggleClearButton" type="button" aria-expanded="false">Clear</button>
+    </div>
 
-    <button class="outer-btn" id="newOuterButton">
-        + New Outer Bound
-    </button>
-
-    <button class="inner-btn" id="newInnerButton">
-        + New Inner Bound
-    </button>
-
-    <button class="finish-btn" id="finishButton">
-        Finish Current Bound
-    </button>
-
-    <button class="location-btn" id="locationButton">
-        📍 My Location
-    </button>
-
-    <button class="toggle-btn" id="toggleButton">
-        Show / Hide Pins
-    </button>
-
-    <button class="clear-outer-btn" id="clearOuterButton">
-        Clear Outer Bounds
-    </button>
-
-    <button class="clear-inner-btn" id="clearInnerButton">
-        Clear Inner Bounds
-    </button>
-
-    <button class="clear-all-btn" id="clearAllButton">
-        Clear Everything
-    </button>
-
+    <div class="clear-step-options" id="clearStepOptions" hidden>
+      <button class="clear-outer-btn" id="clearOuterButton">Clear Outer Bound</button>
+      <button class="clear-inner-btn" id="clearInnerButton">Clear Inner Bound</button>
+      <button class="clear-all-btn" id="clearAllButton">Clear Everything</button>
+    </div>
 </div>
 
-<div class="coordinates-container">
+<div class="coordinates-container" id="coordinatesPanel" hidden>
 
     <div class="coordinate-box">
         <h3>Outer Bounds</h3>
@@ -423,6 +696,11 @@
         ></textarea>
     </div>
 
+</div>
+  </div>
+</aside>
+<button id="toggleButton" class="map-pin-toggle" type="button" aria-label="Hide pins" aria-pressed="true" title="Hide pins"><span class="pin-symbol" aria-hidden="true">📍</span></button>
+<button id="locationButton" class="map-location-button" type="button" aria-label="Drop a pin at my current location" title="Drop a pin at my current location" hidden><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="11" r="7" fill="currentColor"/><path d="M24 20 L8 43 H40 Z" fill="currentColor"/></svg></button>
 </div>
 
 <div class="modal-overlay" id="modal" hidden>
@@ -466,6 +744,42 @@
 
 <script>
 
+    const toast = document.getElementById("appToast");
+    let toastTimer = null;
+    function showToast(message, kind = "info") {
+        toast.textContent = message;
+        toast.className = "app-toast visible " + kind;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("visible"), 3200);
+    }
+
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const mainMenu = document.getElementById('mainMenu');
+    const workspaceGrid = document.getElementById('workspaceGrid');
+    let welcomeTouchStartY = null;
+    function dismissWelcome() {
+        document.body.classList.remove('welcome-active');
+        document.body.classList.add('menu-active');
+        welcomeScreen.classList.add('dismissed');
+        mainMenu.hidden = false;
+        requestAnimationFrame(() => requestAnimationFrame(() => map.invalidateSize({pan:false})));
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                map.setView([position.coords.latitude, position.coords.longitude], 16);
+            }, () => {}, {enableHighAccuracy:false, timeout:5000, maximumAge:300000});
+        }
+    }
+    document.getElementById('welcomeContinue').addEventListener('click', dismissWelcome);
+    welcomeScreen.addEventListener('pointerdown', e => {
+        welcomeTouchStartY = e.clientY;
+    });
+    welcomeScreen.addEventListener('pointerup', e => {
+        if (welcomeTouchStartY !== null && welcomeTouchStartY - e.clientY > 65) dismissWelcome();
+        welcomeTouchStartY = null;
+    });
+    welcomeScreen.addEventListener('pointercancel', () => { welcomeTouchStartY = null; });
+    welcomeScreen.addEventListener('click', e => { if(e.target === welcomeScreen) dismissWelcome(); });
+
     // ==========================================
     // MAP
     // ==========================================
@@ -493,6 +807,7 @@
 
     let currentBound = null;
     let currentType = null;
+    let editingExistingBound = false;
 
     let pinsVisible = true;
 
@@ -518,7 +833,9 @@
 
         currentBound = bound;
         currentType = type;
-
+        editingExistingBound = false;
+        setEditorStep(type);
+        updateBoundPointList();
         updateStatus();
 
         return bound;
@@ -526,82 +843,235 @@
 
 
     // ==========================================
-    // NEW OUTER
-    // ==========================================
+    // Choose a bound collection first; individual bounds can be reopened for editing.
+    document.getElementById("newOuterButton").addEventListener("click", () => setEditorStep("outer-list"));
+    document.getElementById("newInnerButton").addEventListener("click", () => setEditorStep("inner-list"));
 
-    document
-        .getElementById("newOuterButton")
-        .addEventListener("click", function () {
-
-            createBound("outer");
-
-            alert(
-                "New Outer Bound created.\n\n" +
-                "Click the map or use My Location to add points."
-            );
+    function renderBoundSelectionList(type) {
+        const panel = document.getElementById("boundSelectionList");
+        panel.replaceChildren();
+        const bounds = type === "outer" ? outerBounds : innerBounds;
+        if (!bounds.length) {
+            const empty = document.createElement("small");
+            empty.className = "bound-list-empty";
+            empty.textContent = "No " + type + " bounds yet. Use + to create one.";
+            panel.appendChild(empty);
+            return;
+        }
+        bounds.forEach((bound, index) => {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "bound-selection-item";
+            const info = document.createElement("span");
+            const name = document.createElement("strong");
+            name.textContent = capitalize(type) + " Bound " + (index + 1);
+            const detail = document.createElement("small");
+            detail.textContent = bound.markers.length + " pins" + (bound.finished ? " · Finished" : " · In progress");
+            info.append(name, detail);
+            const arrow = document.createElement("span");
+            arrow.className = "bound-selection-arrow";
+            arrow.textContent = "›";
+            item.append(info, arrow);
+            item.addEventListener("click", () => {
+                currentBound = bound;
+                currentType = type;
+                editingExistingBound = true;
+                bound.finished = false;
+                setEditorStep(type);
+                updateStatus();
+                const points = bound.markers.map(marker => marker.getLatLng());
+                if (points.length) map.fitBounds(L.latLngBounds(points), {padding:[35,35], maxZoom:18});
+            });
+            panel.appendChild(item);
         });
+    }
 
+    document.getElementById("addBoundButton").addEventListener("click", () => {
+        const type = createPanelElement.classList.contains("step-inner-list") ? "inner" : "outer";
+        createBound(type);
+        showToast("New " + type + " bound created. Add points on the map or edit the coordinates.");
+    });
 
-    // ==========================================
-    // NEW INNER
-    // ==========================================
-
-    document
-        .getElementById("newInnerButton")
-        .addEventListener("click", function () {
-
-            createBound("inner");
-
-            alert(
-                "New Inner Bound created.\n\n" +
-                "Click the map or use My Location to add points."
-            );
-        });
-
-
-    // ==========================================
     // STATUS
     // ==========================================
 
-    function updateStatus() {
-
-        const status = document.getElementById("status");
-
-        if (!currentBound) {
-            status.textContent =
-                "Ready — choose a bound type";
-
+    // Switch the toolbar into focused sub-screens, keeping only the selected
+    // tool at the top with a back control, as shown in the notebook sketches.
+    const createPanelElement = document.getElementById("createPanel");
+    function setEditorStep(step) {
+        createPanelElement.classList.remove("step-outer","step-inner","step-outer-list","step-inner-list","step-coordinates","step-clear");
+        if (step) createPanelElement.classList.add("step-" + step);
+        const header = document.getElementById("editorSubstepHeader");
+        const title = document.getElementById("editorSubstepTitle");
+        const isList = step === "outer-list" || step === "inner-list";
+        const isEditor = step === "outer" || step === "inner";
+        const titles = {outer:"Outer Bound Editor",inner:"Inner Bound Editor","outer-list":"Outer Bounds","inner-list":"Inner Bounds",coordinates:"Coordinates",clear:"Clear"};
+        header.hidden = !step;
+        title.textContent = titles[step] || "";
+        document.getElementById("addBoundButton").hidden = !isList;
+        document.getElementById("finishButton").hidden = !isEditor || !currentBound || currentBound.finished;
+        document.getElementById("boundSelectionList").hidden = !isList;
+        document.getElementById("coordinatesPanel").hidden = step !== "coordinates";
+        document.getElementById("clearStepOptions").hidden = step !== "clear";
+        document.getElementById("finishTrackButton").hidden = step !== null;
+        document.getElementById("toggleCoordinatesButton").setAttribute("aria-expanded",String(step === "coordinates"));
+        document.getElementById("toggleClearButton").setAttribute("aria-expanded",String(step === "clear"));
+        if (isList) renderBoundSelectionList(step === "outer-list" ? "outer" : "inner");
+        if (step === "coordinates") updateCoordinates();
+        updateBoundPointList();
+        updateStatus();
+    }
+    function discardActiveBound() {
+        if (!currentBound) return;
+        const bound = currentBound;
+        bound.markers.forEach(marker => { if (map.hasLayer(marker)) map.removeLayer(marker); });
+        if (bound.polygon && map.hasLayer(bound.polygon)) map.removeLayer(bound.polygon);
+        const list = bound.type === "outer" ? outerBounds : innerBounds;
+        const index = list.indexOf(bound);
+        if (index >= 0) list.splice(index,1);
+        currentBound = null;
+        currentType = null;
+        updateCoordinates();
+        updateBoundPointList();
+        updateStatus();
+    }
+    document.getElementById("editorStepBack").addEventListener("click", () => {
+        const step = ["outer","inner","outer-list","inner-list","coordinates","clear"].find(name => createPanelElement.classList.contains("step-" + name));
+        if ((step === "outer" || step === "inner") && currentBound && !editingExistingBound) {
+            const discard = window.confirm("Discard this new bound and its pins?");
+            if (!discard) return;
+            discardActiveBound();
+        }
+        if (step === "outer" || step === "inner") {
+            setEditorStep((currentType || step) + "-list");
             return;
         }
+        setEditorStep(null);
+        updateStatus();
+    });
+    document.getElementById("toggleCoordinatesButton").addEventListener("click", () => setEditorStep("coordinates"));
+    document.getElementById("toggleClearButton").addEventListener("click", () => setEditorStep("clear"));
 
-        const list =
-            currentType === "outer"
-                ? outerBounds
-                : innerBounds;
 
-        const index =
-            list.indexOf(currentBound) + 1;
 
-        const pointCount =
-            currentBound.markers.length;
+    function updateStatus() {
+        const status = document.getElementById("status");
+        const outerButton = document.getElementById("newOuterButton");
+        const innerButton = document.getElementById("newInnerButton");
+        const finishButton = document.getElementById("finishButton");
+        const locationButton = document.getElementById("locationButton");
 
-        if (currentBound.finished) {
+        outerButton.classList.toggle("active-step", currentType === "outer" && !!currentBound && !currentBound.finished);
+        innerButton.classList.toggle("active-step", currentType === "inner" && !!currentBound && !currentBound.finished);
+        const inBoundEditor = createPanelElement.classList.contains("step-outer") || createPanelElement.classList.contains("step-inner");
+        finishButton.textContent = "Finish Bound";
+        finishButton.hidden = !currentBound || currentBound.finished || !inBoundEditor;
+        locationButton.hidden = !currentBound || currentBound.finished || !inBoundEditor;
+        updateBoundPointList();
 
-            status.textContent =
-                `${capitalize(currentType)} Bound ${index} finished — ` +
-                `${pointCount} points`;
-
-        } else {
-
-            status.textContent =
-                `Drawing ${capitalize(currentType)} Bound ${index} — ` +
-                `${pointCount} points`;
+        if (!currentBound) {
+            status.textContent = "Ready — choose a bound type";
+            return;
         }
+        const list = currentType === "outer" ? outerBounds : innerBounds;
+        const index = list.indexOf(currentBound) + 1;
+        const pointCount = currentBound.markers.length;
+        status.textContent = currentBound.finished
+            ? `${capitalize(currentType)} Bound ${index} finished — ${pointCount} points`
+            : `Drawing ${capitalize(currentType)} Bound ${index} — ${pointCount} points`;
     }
 
 
     function capitalize(text) {
         return text.charAt(0).toUpperCase() + text.slice(1);
+    }
+
+    function updateBoundPointList() {
+        const panel = document.getElementById("boundPointsList");
+        if (!panel) return;
+        panel.replaceChildren();
+        const isCoordinatesView = createPanelElement.classList.contains("step-coordinates");
+        const isBoundEditor = createPanelElement.classList.contains("step-outer") || createPanelElement.classList.contains("step-inner");
+        if (!isCoordinatesView && !isBoundEditor) { panel.hidden = true; return; }
+        panel.hidden = false;
+        const allBounds = isBoundEditor
+            ? (currentBound ? [{bound: currentBound, label: currentBound.type === "outer" ? "New Outer Boundary" : "New Inner Boundary"}] : [])
+            : [...outerBounds.map((bound, index) => ({bound, label: "Outer Boundary " + (index + 1)})), ...innerBounds.map((bound, index) => ({bound, label: "Inner Boundary " + (index + 1)}))];
+        if (!allBounds.length) {
+            const empty = document.createElement("small");
+            empty.textContent = "No boundary pins yet.";
+            empty.style.color = "#9db2cb";
+            panel.appendChild(empty);
+            return;
+        }
+        allBounds.forEach(({bound, label: headingText}) => {
+            const heading = document.createElement("strong");
+            heading.textContent = headingText;
+            heading.style.cssText = "display:block;font-size:12px;margin:8px 0 4px";
+            panel.appendChild(heading);
+            if (!bound.markers.length) {
+                const empty = document.createElement("small");
+                empty.textContent = "No pins placed yet";
+                empty.style.color = "#9db2cb";
+                panel.appendChild(empty);
+            }
+            bound.markers.forEach((marker, index) => {
+                const position = marker.getLatLng();
+                const row = document.createElement("div");
+                row.className = "bound-point-row";
+                const label = document.createElement("small");
+                label.textContent = "Pin " + (index + 1);
+                row.appendChild(label);
+
+                if (isBoundEditor) {
+                    const makeCoordinateInput = (value, axis) => {
+                        const input = document.createElement("input");
+                        input.type = "number";
+                        input.step = "0.00001";
+                        input.value = value.toFixed(6);
+                        input.setAttribute("aria-label", "Pin " + (index + 1) + " " + axis + " coordinate");
+                        input.title = axis === "Latitude" ? "Latitude (-90 to 90)" : "Longitude (-180 to 180)";
+                        input.className = "pin-coordinate-input";
+                        input.addEventListener("change", () => {
+                            const nextValue = Number(input.value);
+                            const validRange = axis === "Latitude"
+                                ? Number.isFinite(nextValue) && nextValue >= -90 && nextValue <= 90
+                                : Number.isFinite(nextValue) && nextValue >= -180 && nextValue <= 180;
+                            if (!validRange) {
+                                showToast(axis + " must be between " + (axis === "Latitude" ? "-90 and 90." : "-180 and 180."), "error");
+                                input.value = (axis === "Latitude" ? marker.getLatLng().lat : marker.getLatLng().lng).toFixed(6);
+                                return;
+                            }
+                            const currentPosition = marker.getLatLng();
+                            const nextLat = axis === "Latitude" ? nextValue : currentPosition.lat;
+                            const nextLng = axis === "Longitude" ? nextValue : currentPosition.lng;
+                            marker.setLatLng([nextLat, nextLng]);
+                            drawPolygon(bound);
+                            updateCoordinates();
+                            updateBoundPointList();
+                        });
+                        return input;
+                    };
+                    row.append(
+                        makeCoordinateInput(position.lat, "Latitude"),
+                        makeCoordinateInput(position.lng, "Longitude")
+                    );
+                } else {
+                    const coordinates = document.createElement("small");
+                    coordinates.textContent = position.lat.toFixed(5) + ", " + position.lng.toFixed(5);
+                    row.appendChild(coordinates);
+                }
+
+                const remove = document.createElement("button");
+                remove.type = "button";
+                remove.className = "bound-point-remove";
+                remove.textContent = "×";
+                remove.setAttribute("aria-label", "Remove pin " + (index + 1) + " from " + headingText);
+                remove.addEventListener("click", () => deletePin(bound, marker));
+                row.append(label, remove);
+                panel.appendChild(row);
+            });
+        });
     }
 
 
@@ -611,16 +1081,16 @@
 
     function addPoint(lat, lng) {
 
-        // If there isn't a bound yet,
-        // automatically create an outer bound.
+        // Pins can only be placed after the user chooses a bound type.
         if (!currentBound) {
-            createBound("outer");
+            showToast("Choose Outer Bound or Inner Bound before placing pins.");
+            return;
         }
 
         // Don't add points to a finished bound.
         if (currentBound.finished) {
 
-            alert(
+            showToast(
                 "This bound is finished.\n\n" +
                 "Create a new bound to add more points."
             );
@@ -629,12 +1099,9 @@
         }
 
         const markerOptions = {
-            draggable: true
+            draggable: true,
+            icon: numberedPinIcon(currentBound.type, currentBound.markers.length + 1)
         };
-
-        if (currentBound.type === "inner") {
-            markerOptions.icon = innerPinIcon;
-        }
 
         const marker = L.marker(
             [lat, lng],
@@ -644,7 +1111,7 @@
         marker.addTo(map);
 
         currentBound.markers.push(marker);
-
+        updateBoundPointList();
 
         // When marker is dragged,
         // redraw the polygon it belongs to.
@@ -654,6 +1121,7 @@
 
             drawPolygon(bound);
             updateCoordinates();
+            updateBoundPointList();
 
         });
 
@@ -662,6 +1130,7 @@
 
             drawPolygon(bound);
             updateCoordinates();
+            updateBoundPointList();
 
         });
 
@@ -746,8 +1215,40 @@
     }
 
 
-    // Orange pin for inner bounds, same size and shape
-    // as Leaflet's default blue pin
+    // Numbered map pins keep each point identifiable on the map.
+    function numberedPinIcon(type, number) {
+        const fill = type === "inner" ? "#ef6c00" : "#2588ff";
+        const stroke = type === "inner" ? "#a84a00" : "#1255a0";
+        return L.divIcon({
+            className: type === "inner" ? "inner-pin" : "outer-pin",
+            html:
+                '<svg width="29" height="45" viewBox="0 0 29 45" aria-hidden="true">' +
+                '<path d="M14.5 1C7.1 1 1 7.1 1 14.5c0 9.5 13.5 29 13.5 29s13.5-19.5 13.5-29C28 7.1 21.9 1 14.5 1z" ' +
+                'fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>' +
+                '<text x="14.5" y="19" text-anchor="middle" font-size="' + (String(number).length > 2 ? 9 : 11) + '" ' +
+                'font-family="Arial,sans-serif" font-weight="700" fill="#fff">' + number + '</text>' +
+                '</svg>',
+            iconSize: [29, 45],
+            iconAnchor: [14, 45],
+            tooltipAnchor: [18, -30]
+        });
+    }
+
+    // Legacy defaults retained for compatibility.
+    const outerPinIcon = L.divIcon({
+        className: "outer-pin",
+        html:
+            '<svg width="25" height="41" viewBox="0 0 25 41">' +
+            '<path d="M12.5 1C6.1 1 1 6.1 1 12.5c0 8.6 11.5 27 11.5 27' +
+            'S24 21.1 24 12.5C24 6.1 18.9 1 12.5 1z" ' +
+            'fill="#2588ff" stroke="#1255a0" stroke-width="1.5"/>' +
+            '<circle cx="12.5" cy="12.5" r="4.5" fill="white"/>' +
+            '</svg>',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        tooltipAnchor: [16, -28]
+    });
+
     const innerPinIcon = L.divIcon({
         className: "inner-pin",
         html:
@@ -773,16 +1274,14 @@
 
         bound.markers.splice(bound.markers.indexOf(marker), 1);
 
-        // A finished bound needs at least 3 points.
-        // If it drops below that, reopen it so more
-        // pins can be added.
-        if (bound.finished && bound.markers.length < 3) {
+        // Renumber remaining pins in this boundary after a deletion.
+        bound.markers.forEach((remainingMarker, markerIndex) => {
+            remainingMarker.setIcon(numberedPinIcon(bound.type, markerIndex + 1));
+        });
 
-            bound.finished = false;
+        // Finished boundaries are not reopened for editing. Create a new
+        // boundary from the toolbar if another one is needed.
 
-            currentBound = bound;
-            currentType = bound.type;
-        }
 
         // Remove the bound completely once its last pin is gone
         if (bound.markers.length === 0) {
@@ -802,7 +1301,7 @@
         drawPolygon(bound);
 
         updateCoordinates();
-
+        updateBoundPointList();
         updateStatus();
     }
 
@@ -812,12 +1311,12 @@
     // ==========================================
 
     map.on("click", function (event) {
-
-        addPoint(
-            event.latlng.lat,
-            event.latlng.lng
-        );
-
+        if (!document.body.classList.contains("create-active")) return;
+        if (!currentBound || currentBound.finished) {
+            showToast("Choose Outer Bound or Inner Bound before placing pins.");
+            return;
+        }
+        addPoint(event.latlng.lat, event.latlng.lng);
     });
 
 
@@ -825,49 +1324,74 @@
     // DRAW POLYGON
     // ==========================================
 
-    function drawPolygon(bound) {
+    function drawPolygon(bound, skipOuterRefresh) {
 
-        // Remove previous polygon
+        // Remove the previous outline/fill for this boundary.
         if (bound.polygon) {
-
             map.removeLayer(bound.polygon);
-
             bound.polygon = null;
         }
 
-
-        // Need at least 3 points
         if (bound.markers.length < 3) {
+            if (bound.type === "inner" && !skipOuterRefresh) {
+                outerBounds.forEach(outer => drawPolygon(outer, true));
+            }
             return;
         }
 
-
-        const points =
-            bound.markers.map(function (marker) {
-
-                return marker.getLatLng();
-
-            });
-
-
-        let polygonColor;
+        const points = bound.markers.map(marker => marker.getLatLng());
 
         if (bound.type === "outer") {
-            polygonColor = "#1976d2";
-        } else {
-            polygonColor = "#ef6c00";
-        }
+            // Inner rings are treated as holes in the outer polygon, so the
+            // underlying map remains visible inside every inner boundary.
+            const innerRings = innerBounds
+                .filter(inner => inner.markers.length >= 3)
+                .map(inner => inner.markers.map(marker => marker.getLatLng()));
 
-
-        bound.polygon = L.polygon(
-            points,
-            {
-                color: polygonColor,
-                fillColor: polygonColor,
+            const rings = [points, ...innerRings];
+            // Keep the blue fill but suppress Leaflet's stroke on every ring.
+            // Draw the outer blue edge separately so inner edges stay orange.
+            const areaFill = L.polygon(rings, {
+                color: "#1976d2",
+                opacity: 0,
+                fillColor: "#1976d2",
                 fillOpacity: 0.20,
+                weight: 3,
+                fillRule: "evenodd"
+            });
+            // Leaflet polylines do not automatically close a loop.
+            const closedOuterPoints = [...points, points[0]];
+            const outerOutline = L.polyline(closedOuterPoints, {
+                color: "#1976d2",
                 weight: 3
+            });
+            bound.polygon = L.featureGroup([areaFill, outerOutline]).addTo(map);
+
+            // Redrawing the outer fill can place it above the inner outlines.
+            // Bring every inner outline back to the front after the fill layer.
+            innerBounds.forEach(inner => {
+                if (inner.polygon && map.hasLayer(inner.polygon) && inner.polygon.bringToFront) {
+                    inner.polygon.bringToFront();
+                }
+            });
+        } else {
+            // Keep the inner boundary's orange outline, but do not paint over
+            // the map or the transparent hole in the outer blue area.
+            // Use a polyline rather than a polygon: a polyline cannot create
+            // an interior fill, so the map remains visible inside the boundary.
+            // Explicitly connect the final pin back to the first pin.
+            const closedInnerPoints = [...points, points[0]];
+            bound.polygon = L.polyline(closedInnerPoints, {
+                color: "#ef6c00",
+                weight: 3
+            }).addTo(map);
+
+            // The outer polygon must be redrawn whenever an inner ring moves,
+            // gains a point, or is deleted.
+            if (!skipOuterRefresh) {
+                outerBounds.forEach(outer => drawPolygon(outer, true));
             }
-        ).addTo(map);
+        }
     }
 
 
@@ -880,18 +1404,13 @@
         .addEventListener("click", function () {
 
             if (!currentBound) {
-
-                alert(
-                    "Create an Outer or Inner Bound first."
-                );
-
+                showToast("Choose Outer Bound or Inner Bound first.");
                 return;
             }
 
-
             if (currentBound.markers.length < 3) {
 
-                alert(
+                showToast(
                     "A bound needs at least 3 points."
                 );
 
@@ -900,22 +1419,18 @@
 
 
             currentBound.finished = true;
-
             drawPolygon(currentBound);
-
+            const finishedType = currentType;
+            editingExistingBound = false;
             updateCoordinates();
-
-            updateStatus();
-
-            alert(
-                capitalize(currentType) +
-                " Bound finished!"
-            );
+            updateBoundPointList();
+            setEditorStep(finishedType + "-list");
+            showToast(capitalize(finishedType) + " bound saved. Select it again anytime to edit.");
         });
 
 
     // ==========================================
-    // MY LOCATION
+    // DROP A PIN AT THE DEVICE'S CURRENT LOCATION
     // ==========================================
 
     document
@@ -924,7 +1439,7 @@
 
             if (!navigator.geolocation) {
 
-                alert(
+                showToast(
                     "Your browser does not support location services."
                 );
 
@@ -932,19 +1447,9 @@
             }
 
 
-            // Automatically create an outer bound
-            // if the user hasn't created one yet.
-            if (!currentBound) {
-
-                createBound("outer");
-            }
-
-
-            // If current bound is finished,
-            // create a new bound of the same type.
-            if (currentBound.finished) {
-
-                createBound(currentType);
+            if (!currentBound || currentBound.finished) {
+                showToast("Choose Outer Bound or Inner Bound before dropping a location pin.");
+                return;
             }
 
 
@@ -954,6 +1459,12 @@
             status.textContent =
                 "Getting your location...";
 
+
+            if (!window.isSecureContext) {
+                showToast("Location access requires a secure HTTPS connection. Open the deployed GitHub Pages website.");
+                updateStatus();
+                return;
+            }
 
             navigator.geolocation.getCurrentPosition(
 
@@ -985,20 +1496,21 @@
 
                     console.error(error);
 
-                    alert(
-                        "Could not get your location.\n\n" +
-                        "Make sure location permission is enabled " +
-                        "for this website."
-                    );
+                    const reason = error.code === 1
+                        ? "Allow location access for this website in your browser settings."
+                        : error.code === 2
+                            ? "Your laptop could not determine its location. Check that Wi-Fi and location services are enabled."
+                            : "The location request timed out. Please try again.";
+                    showToast("Could not get your location. " + reason, "error");
 
                     updateStatus();
                 },
 
 
                 {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
+                    enableHighAccuracy: false,
+                    timeout: 20000,
+                    maximumAge: 60000
                 }
             );
         });
@@ -1013,11 +1525,22 @@
         .addEventListener("click", function () {
 
             pinsVisible = !pinsVisible;
-
+            const pinToggle = document.getElementById("toggleButton");
+            pinToggle.setAttribute("aria-pressed", String(pinsVisible));
+            pinToggle.setAttribute("aria-label", pinsVisible ? "Hide pins" : "Show pins");
+            pinToggle.title = pinsVisible ? "Hide pins" : "Show pins";
 
             const allBounds =
                 outerBounds.concat(innerBounds);
 
+
+            previewPinLayers.forEach(function (marker) {
+                if (pinsVisible) {
+                    if (!map.hasLayer(marker)) marker.addTo(map);
+                } else if (map.hasLayer(marker)) {
+                    map.removeLayer(marker);
+                }
+            });
 
             allBounds.forEach(function (bound) {
 
@@ -1141,9 +1664,9 @@
 
             if (currentType === "outer") {
                 currentBound = null;
+                currentType = null;
             }
-
-
+            setEditorStep(null);
             updateCoordinates();
             updateStatus();
         });
@@ -1178,9 +1701,9 @@
 
             if (currentType === "inner") {
                 currentBound = null;
+                currentType = null;
             }
-
-
+            setEditorStep(null);
             updateCoordinates();
             updateStatus();
         });
@@ -1221,6 +1744,7 @@
 
         currentBound = null;
         currentType = null;
+        setEditorStep(null);
 
         currentTrackName = "";
 
@@ -1425,7 +1949,7 @@
             const bounds = getMapBounds();
 
             if (bounds.error) {
-                alert(bounds.error);
+                showToast(bounds.error);
                 return;
             }
 
@@ -1445,7 +1969,7 @@
                 .eq("id", 1);
 
             if (error) {
-                alert("Could not send to the car: " + error.message);
+                showToast("Could not send to the car: " + error.message);
             }
 
             await showActiveTrack();
@@ -1555,6 +2079,20 @@
 
         document.getElementById("status").textContent =
             `Saved "${name}"`;
+
+        // Completing a track returns the user to Stage 2 (the main menu).
+        discardWorkingBounds();
+        clearTrackPreview();
+        setEditorStep(null);
+        document.getElementById("toggleButton").hidden = true;
+        document.getElementById("finishButton").hidden = true;
+        document.getElementById("locationButton").hidden = true;
+        document.body.classList.remove("create-active", "load-active");
+        document.body.classList.add("menu-active");
+        mainMenu.classList.remove("choice-create", "choice-load");
+        menuChoiceInProgress = false;
+        mainMenu.hidden = false;
+        requestAnimationFrame(() => requestAnimationFrame(() => map.invalidateSize({pan:false})));
     }
 
 
@@ -1573,6 +2111,9 @@
 
         loadBound("outer", track.outer_bound);
         loadBound("inner", track.inner_bound);
+        setEditorStep(null);
+        currentBound = null;
+        currentType = null;
 
         currentTrackName = track.name;
 
@@ -1609,14 +2150,6 @@
 
         drawPolygon(currentBound);
     }
-
-
-    document
-        .getElementById("saveTrackButton")
-        .addEventListener("click", function () {
-
-            openModal("save");
-        });
 
 
     // Fill the dropdown with the saved tracks
@@ -1675,6 +2208,10 @@
 
             openLoadModal();
         });
+
+    document.getElementById("finishTrackButton").addEventListener("click", function () {
+        openModal("save");
+    });
 
 
     // ==========================================
@@ -1811,7 +2348,7 @@
 
         trackStatus.textContent = "Database not set up";
 
-        ["loadTrackButton", "saveTrackButton", "activateTrackButton"]
+        ["loadTrackButton", "activateTrackButton"]
             .forEach(function (id) {
                 document.getElementById(id).disabled = true;
             });
@@ -1825,7 +2362,613 @@
     updateCoordinates();
     updateStatus();
 
+    // ==========================================
+    // REDESIGNED WORKSPACE NAVIGATION
+    // ==========================================
+    let selectedSavedTrackId = null;
+    let previewLayers = [];
+    let previewPinLayers = [];
+
+    const createPanel = document.getElementById("createPanel");
+    const loadPanel = document.getElementById("loadPanel");
+    const workspaceHeading = document.getElementById("workspaceHeading");
+    const savedTrackList = document.getElementById("savedTrackList");
+    const loadSelectedTrackButton = document.getElementById("loadSelectedTrackButton");
+    const sendSelectedTrackButton = document.getElementById("sendSelectedTrackButton");
+    const deleteSelectedTrackButton = document.getElementById("deleteSelectedTrackButton");
+
+    function clearTrackPreview() {
+        previewLayers.forEach(layer => {
+            if (map.hasLayer(layer)) map.removeLayer(layer);
+        });
+        previewPinLayers.forEach(marker => {
+            if (map.hasLayer(marker)) map.removeLayer(marker);
+        });
+        previewLayers = [];
+        previewPinLayers = [];
+    }
+
+    function showWorkspace(mode) {
+        mainMenu.hidden = true;
+        document.body.classList.remove("menu-active");
+        workspaceGrid.hidden = false;
+        const isLoad = mode === "load";
+        if (!isLoad) setEditorStep(null);
+        if (isLoad) {
+            clearTrackPreview();
+            clearAllBounds();
+            selectedSavedTrackId = null;
+            pinsVisible = true;
+            const pinToggle = document.getElementById("toggleButton");
+            pinToggle.setAttribute("aria-pressed", "true");
+            pinToggle.setAttribute("aria-label", "Hide pins");
+            pinToggle.title = "Hide pins";
+        }
+        workspaceHeading.textContent = isLoad ? "Load Track" : "Create Track";
+        createPanel.hidden = isLoad;
+        loadPanel.hidden = !isLoad;
+        document.getElementById("toggleButton").hidden = false;
+        document.getElementById("finishButton").hidden = isLoad || !currentBound || currentBound.finished;
+        document.getElementById("locationButton").hidden = isLoad || !currentBound || currentBound.finished;
+        document.body.classList.toggle("create-active", !isLoad);
+        document.body.classList.toggle("load-active", isLoad);
+        document.getElementById("loadTrackButton").hidden = true;
+        clearTrackPreview();
+        // Leaflet must recalculate its pixel origin after the map changes from
+        // a full-screen backdrop into the split editor layout.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            map.invalidateSize({pan:false});
+            map.setView(map.getCenter(), map.getZoom(), {animate:false});
+        }));
+        if (isLoad) refreshSavedTrackPanel();
+    }
+
+    let menuChoiceInProgress = false;
+    function chooseMenuAction(mode) {
+        if (menuChoiceInProgress) return;
+        menuChoiceInProgress = true;
+        mainMenu.classList.remove("choice-create","choice-load");
+        mainMenu.classList.add(mode === "create" ? "choice-create" : "choice-load");
+        // Fade the prompt and unused option without moving the selected button.
+        window.setTimeout(() => {
+            showWorkspace(mode);
+            mainMenu.classList.remove("choice-create","choice-load");
+            menuChoiceInProgress = false;
+        }, 400);
+    }
+    document.getElementById("menuCreateButton").addEventListener("click", () => chooseMenuAction("create"));
+    document.getElementById("menuLoadButton").addEventListener("click", () => chooseMenuAction("load"));
+    function discardWorkingBounds() {
+        [...outerBounds, ...innerBounds].forEach(bound => {
+            bound.markers.forEach(marker => {
+                if (map.hasLayer(marker)) map.removeLayer(marker);
+            });
+            if (bound.polygon && map.hasLayer(bound.polygon)) map.removeLayer(bound.polygon);
+        });
+        outerBounds = [];
+        innerBounds = [];
+        currentBound = null;
+        currentType = null;
+        updateCoordinates();
+        updateBoundPointList();
+        updateStatus();
+    }
+
+    document.getElementById("backToMenuButton").addEventListener("click", () => {
+        if (document.body.classList.contains("create-active")) {
+            const leave = window.confirm("Are you sure you want to go back? Your bounds have not been saved.\n\nChoose OK to discard the bounds and return to the menu, or Cancel to stay in Create Track.");
+            if (!leave) return;
+            discardWorkingBounds();
+        }
+        clearTrackPreview();
+        setEditorStep(null);
+        document.getElementById("toggleButton").hidden = true;
+        document.getElementById("finishButton").hidden = true;
+        document.getElementById("locationButton").hidden = true;
+        document.body.classList.remove("create-active","load-active");
+        document.body.classList.add("menu-active");
+        mainMenu.classList.remove("choice-create","choice-load");
+        menuChoiceInProgress = false;
+        mainMenu.hidden = false;
+        requestAnimationFrame(() => requestAnimationFrame(() => map.invalidateSize({pan:false})));
+    });
+
+    function renderSavedTrackPanel() {
+        savedTrackList.innerHTML = "";
+        if (!savedTracks.length) {
+            savedTrackList.innerHTML = '<div class="empty-tracks">No saved tracks yet. Create and save a track first.</div>';
+            selectedSavedTrackId = null;
+            updateLoadActions();
+            return;
+        }
+        savedTracks.forEach(track => {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "saved-track-item" + (String(track.id) === String(selectedSavedTrackId) ? " selected" : "");
+            const title = document.createElement("span");
+            title.textContent = track.name;
+            const detail = document.createElement("small");
+            detail.textContent = (track.outer_bound?.length || 0) + " outer points · " + (track.inner_bound?.length || 0) + " inner points";
+            title.appendChild(detail);
+            const check = document.createElement("span");
+            check.className = "track-check";
+            check.textContent = String(track.id) === String(selectedSavedTrackId) ? "✓" : "›";
+            item.append(title, check);
+            item.addEventListener("click", () => {
+                selectedSavedTrackId = track.id;
+                renderSavedTrackPanel();
+            });
+            savedTrackList.appendChild(item);
+        });
+        updateLoadActions();
+        if (selectedSavedTrackId === null) clearTrackPreview();
+        else previewSelectedTrack();
+    }
+
+    function updateLoadActions() {
+        const hasSelection = savedTracks.some(t => String(t.id) === String(selectedSavedTrackId));
+        loadSelectedTrackButton.disabled = !hasSelection;
+        sendSelectedTrackButton.disabled = !hasSelection || !db;
+        deleteSelectedTrackButton.disabled = !hasSelection || !db;
+    }
+
+    async function refreshSavedTrackPanel() {
+        savedTrackList.innerHTML = '<div class="empty-tracks">Loading saved tracks…</div>';
+        const problem = await refreshTracks();
+        if (problem) {
+            savedTrackList.innerHTML = '<div class="empty-tracks">Could not load tracks: ' + problem.replace(/[<>&"]/g, "") + '</div>';
+            updateLoadActions();
+            return;
+        }
+        if (!savedTracks.some(t => String(t.id) === String(selectedSavedTrackId))) {
+            selectedSavedTrackId = null;
+        }
+        renderSavedTrackPanel();
+    }
+
+    function getSelectedSavedTrack() {
+        return savedTracks.find(t => String(t.id) === String(selectedSavedTrackId));
+    }
+
+    function previewSelectedTrack() {
+        const track = getSelectedSavedTrack();
+        if (!track) return;
+        clearTrackPreview();
+        if (track.outer_bound?.length) {
+            const previewRings = [track.outer_bound];
+            if (track.inner_bound?.length) previewRings.push(track.inner_bound);
+            // Fill the outer area with an invisible polygon stroke, then draw
+            // only the blue outer edge. This leaves the inner edge orange.
+            previewLayers.push(L.polygon(previewRings, {
+                color:"#55a7ff",
+                opacity:0,
+                weight:4,
+                fillColor:"#3388ff",
+                fillOpacity:.12,
+                fillRule:"evenodd"
+            }).addTo(map));
+            const closedPreviewOuter = [...track.outer_bound, track.outer_bound[0]];
+            previewLayers.push(L.polyline(closedPreviewOuter, {
+                color:"#55a7ff",
+                weight:4,
+                dashArray:"8 6"
+            }).addTo(map));
+        }
+        if (track.inner_bound?.length) {
+            // Outline only: the inner area should show the map beneath it.
+            // An inner boundary is only an outline. A polyline has no fill
+            // behavior at all, avoiding any orange tint inside the boundary.
+            const closedPreviewInner = [...track.inner_bound, track.inner_bound[0]];
+            previewLayers.push(L.polyline(closedPreviewInner, {
+                color:"#ef6c00",
+                weight:4,
+                dashArray:"8 6"
+            }).addTo(map));
+        }
+        const addPreviewPins = (points, type) => {
+            (points || []).forEach((point, index) => {
+                const pin = L.marker(point, {
+                    interactive: false,
+                    icon: numberedPinIcon(type, index + 1)
+                });
+                previewPinLayers.push(pin);
+                if (pinsVisible) pin.addTo(map);
+            });
+        };
+        addPreviewPins(track.outer_bound, "outer");
+        addPreviewPins(track.inner_bound, "inner");
+        if (previewLayers.length) {
+            const mapElement = document.getElementById("map");
+            const sidebar = document.getElementById("workspaceSidebar");
+            const mapRect = mapElement.getBoundingClientRect();
+            const sidebarRect = sidebar.getBoundingClientRect();
+            let paddingTopLeft = [28, 28];
+            let paddingBottomRight = [28, 28];
+            if (window.matchMedia("(max-width: 700px)").matches) {
+                const topObstruction = Math.max(0, sidebarRect.bottom - mapRect.top);
+                paddingTopLeft = [24, topObstruction + 24];
+                paddingBottomRight = [24, 24];
+            } else {
+                const leftObstruction = Math.max(0, sidebarRect.right - mapRect.left);
+                paddingTopLeft = [leftObstruction + 24, 28];
+            }
+            map.fitBounds(L.featureGroup(previewLayers).getBounds(), {
+                paddingTopLeft,
+                paddingBottomRight,
+                maxZoom: 18
+            });
+        }
+    }
+
+    function loadSelectedTrackIntoEditor() {
+        const track = getSelectedSavedTrack();
+        if (!track) return;
+        clearTrackPreview();
+        clearAllBounds();
+        loadBound("outer", track.outer_bound || []);
+        loadBound("inner", track.inner_bound || []);
+        setEditorStep(null);
+        currentBound = null;
+        currentType = null;
+        currentTrackName = track.name;
+        const allBounds = outerBounds.concat(innerBounds).filter(b => b.polygon);
+        if (allBounds.length) map.fitBounds(L.featureGroup(allBounds.map(b => b.polygon)).getBounds(), {padding:[30,30]});
+        updateCoordinates();
+        updateStatus();
+        showWorkspace("create");
+        document.getElementById("status").textContent = 'Loaded "' + track.name + '"';
+    }
+
+    deleteSelectedTrackButton.addEventListener("click", async () => {
+        const track = getSelectedSavedTrack();
+        if (!track) return;
+        if (!window.confirm('Delete "' + track.name + '" permanently?')) return;
+        deleteSelectedTrackButton.disabled = true;
+        const { data, error } = await db.from("tracks").delete().eq("id", track.id).select("id");
+        if (error || !data || data.length === 0) {
+            showToast("Could not delete track: " + (error ? error.message : "database did not confirm deletion"), "error");
+            updateLoadActions();
+            return;
+        }
+        if (currentTrackName === track.name) currentTrackName = "";
+        selectedSavedTrackId = null;
+        clearTrackPreview();
+        showToast('Deleted "' + track.name + '".', "success");
+        await refreshSavedTrackPanel();
+    });
+    loadSelectedTrackButton.addEventListener("click", loadSelectedTrackIntoEditor);
+    sendSelectedTrackButton.addEventListener("click", async () => {
+        const track = getSelectedSavedTrack();
+        if (!track || !db) return;
+        if (!window.confirm('Send "' + track.name + '" to the car? This will replace the active course.')) return;
+
+        sendSelectedTrackButton.disabled = true;
+        trackStatus.textContent = "Sending to car...";
+        const { error } = await db
+            .from("active_track")
+            .update({
+                name: track.name || "Unsaved track",
+                outer_bound: track.outer_bound || [],
+                inner_bound: track.inner_bound || []
+            })
+            .eq("id", 1);
+
+        if (error) {
+            showToast("Could not send to the car: " + error.message, "error");
+            await showActiveTrack();
+            updateLoadActions();
+            return;
+        }
+
+        await showActiveTrack();
+        clearTrackPreview();
+        selectedSavedTrackId = null;
+        renderSavedTrackPanel();
+        showToast('"' + track.name + '" sent to the car. Choose another track when ready.', "success");
+    });
+
+    // Keep map dimensions correct when the browser rotates or resizes.
+    window.addEventListener("resize", () => {
+        if (!workspaceGrid.hidden) map.invalidateSize();
+    });
+
 </script>
+
+
+<style>
+/* Keep the subtool back arrow compact despite the general full-width toolbar button rules. */
+#createPanel .controls .editor-substep-header .editor-back-arrow{
+  display:grid!important;
+  flex:0 0 38px!important;
+  width:38px!important;
+  min-width:38px!important;
+  max-width:38px!important;
+  height:38px!important;
+  min-height:38px!important;
+  max-height:38px!important;
+  padding:0!important;
+  font-size:22px!important;
+  line-height:1!important;
+  text-align:center!important;
+}
+</style>
+
+<style>
+/* Keep Finish Bound in the active bound editor header, opposite Back. */
+#createPanel .editor-substep-header .toolbar-finish-button{
+  display:block!important;
+  margin-left:auto!important;
+  flex:0 0 auto!important;
+  width:auto!important;
+  min-width:0!important;
+  min-height:38px!important;
+  height:38px!important;
+  padding:0 13px!important;
+  text-align:center!important;
+}
+#createPanel .editor-substep-header .toolbar-finish-button[hidden]{
+  display:none!important;
+}
+</style>
 
 </body>
 </html>
+
+<style>
+/* Mobile: compact top toolbar, with map controls grouped at bottom-right. */
+@media (max-width:700px){
+  .workspace-sidebar{top:8px!important;bottom:auto!important;left:8px!important;right:8px!important;max-height:34dvh!important;overflow-y:auto!important;padding:8px!important;border-radius:14px!important}
+  .sidebar-topline{padding-bottom:5px!important}
+  .sidebar-topline .back-menu-button{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important}
+  .sidebar-topline h2{font-size:16px!important}
+  #createPanel .controls{gap:5px!important;padding:7px!important}
+  #createPanel .controls button,.load-actions button{min-height:34px!important;padding:7px 9px!important;font-size:12px!important}
+  #createPanel .track-buttons{padding:5px!important}
+  .saved-track-list{max-height:12dvh!important;overflow-y:auto!important}
+  .load-actions{gap:5px!important}
+  .panel-help,.panel-note{font-size:10px!important;margin:4px 0!important}
+  .map-pin-toggle{top:auto!important;bottom:14px!important;right:14px!important;width:40px!important;height:40px!important;min-height:40px!important;border-radius:12px!important}
+  .pin-symbol{font-size:19px!important}
+  .map-location-button{top:auto!important;bottom:64px!important;right:14px!important;width:40px!important;height:40px!important;min-height:40px!important;border-radius:12px!important;font-size:22px!important}
+  #locationButton svg{width:22px;height:22px}
+  .map-finish-button{top:auto!important;bottom:14px!important;right:62px!important;min-height:40px!important}
+}
+</style>
+
+<style>
+/* Keep map action buttons pinned to the phone viewport, independent of the top toolbar. */
+@media (max-width:700px){
+  #toggleButton.map-pin-toggle{position:fixed!important;top:auto!important;right:14px!important;bottom:calc(14px + env(safe-area-inset-bottom, 0px))!important;left:auto!important;z-index:2200!important}
+  #locationButton.map-location-button{position:fixed!important;top:auto!important;right:14px!important;bottom:calc(62px + env(safe-area-inset-bottom, 0px))!important;left:auto!important;z-index:2201!important}
+}
+</style>
+
+<style>
+/* Correct mobile layout: compact editor at the top; map controls at viewport bottom-right. */
+@media (max-width:700px){
+  #workspaceSidebar{
+    top:calc(8px + env(safe-area-inset-top, 0px))!important;
+    bottom:auto!important;
+    left:8px!important;right:8px!important;width:auto!important;
+    max-height:34dvh!important;overflow-y:auto!important;
+    padding:9px!important;border-radius:16px!important;
+  }
+  #createPanel .controls{gap:5px!important;padding:6px!important}
+  #createPanel .controls button,#finishTrackButton{
+    min-height:38px!important;padding:7px 10px!important;font-size:13px!important;
+  }
+  #toggleButton.map-pin-toggle{
+    position:absolute!important;top:auto!important;right:14px!important;
+    bottom:calc(14px + env(safe-area-inset-bottom, 0px))!important;
+    left:auto!important;width:42px!important;height:42px!important;
+    min-height:42px!important;z-index:2300!important;
+  }
+  #locationButton.map-location-button{
+    position:absolute!important;top:auto!important;right:14px!important;
+    bottom:calc(64px + env(safe-area-inset-bottom, 0px))!important;
+    left:auto!important;width:42px!important;height:42px!important;
+    min-height:42px!important;z-index:2301!important;
+  }
+  #locationButton svg{width:22px!important;height:22px!important}
+}
+</style>
+
+<style>
+/* Mobile toolbar uses a consistent compact footprint; controls are evenly spaced. */
+@media (max-width:700px){
+  #workspaceSidebar{
+    box-sizing:border-box!important;
+    top:calc(8px + env(safe-area-inset-top, 0px))!important;
+    bottom:auto!important;
+    height:min(350px, 42dvh)!important;
+    max-height:min(350px, 42dvh)!important;
+    min-height:0!important;
+    overflow-y:auto!important;
+    padding:12px!important;
+    gap:10px!important;
+  }
+  #workspaceSidebar .sidebar-topline{
+    flex:0 0 auto!important;
+    min-height:48px!important;
+    padding:0 0 9px!important;
+    margin:0!important;
+  }
+  #workspaceSidebar .sidebar-topline h2{font-size:17px!important}
+  #workspaceSidebar .sidebar-topline .back-menu-button{
+    width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important;
+  }
+  #finishTrackButton{min-height:38px!important;padding:6px 10px!important;font-size:12px!important}
+  #createPanel .track-buttons{display:none!important}
+  #createPanel .controls{
+    display:flex!important;flex-direction:column!important;
+    flex:0 0 auto!important;gap:10px!important;padding:0!important;
+  }
+  #createPanel .bound-step-buttons,#createPanel .utility-step-buttons{
+    display:flex!important;flex-direction:column!important;gap:10px!important;
+    width:100%!important;
+  }
+  #createPanel .controls button{
+    box-sizing:border-box!important;width:100%!important;
+    min-height:46px!important;height:46px!important;
+    padding:8px 12px!important;font-size:13px!important;line-height:1.2!important;
+  }
+  #createPanel.step-outer .bound-step-buttons,#createPanel.step-inner .bound-step-buttons{display:none!important}
+  #createPanel.step-outer .utility-step-buttons,#createPanel.step-inner .utility-step-buttons{display:none!important}
+  #boundPointsList{max-height:150px!important;overflow-y:auto!important}
+  #workspaceSidebar .load-panel{min-height:0!important;overflow-y:auto!important}
+}
+</style>
+
+<style>
+@media (max-width:700px){
+  /* Shorter, fixed-height toolbar; content scrolls inside when necessary. */
+  #workspaceSidebar{
+    height:min(260px, 34dvh)!important;
+    max-height:min(260px, 34dvh)!important;
+    padding:9px!important;
+    gap:7px!important;
+  }
+  #workspaceSidebar .sidebar-topline{min-height:40px!important;padding-bottom:6px!important}
+  #workspaceSidebar .sidebar-topline h2{font-size:16px!important}
+  #workspaceSidebar .sidebar-topline .back-menu-button{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important}
+  #finishTrackButton{min-height:34px!important;padding:5px 8px!important;font-size:11px!important}
+  #createPanel .controls,#createPanel .bound-step-buttons,#createPanel .utility-step-buttons{gap:7px!important}
+  #createPanel .controls button{height:39px!important;min-height:39px!important;padding:6px 9px!important;font-size:12px!important}
+  /* These map controls are fixed to the viewport, not placed inside the toolbar. */
+  #toggleButton.map-pin-toggle{
+    position:fixed!important;top:auto!important;left:auto!important;
+    right:14px!important;bottom:calc(16px + env(safe-area-inset-bottom, 0px))!important;
+    width:42px!important;height:42px!important;min-height:42px!important;
+    z-index:4000!important;
+  }
+  #locationButton.map-location-button{
+    position:fixed!important;top:auto!important;left:auto!important;
+    right:14px!important;bottom:calc(66px + env(safe-area-inset-bottom, 0px))!important;
+    width:42px!important;height:42px!important;min-height:42px!important;
+    z-index:4001!important;
+  }
+}
+</style>
+
+<style>
+/* Ensure the Load Track panel respects its hidden state and fills the mobile sidebar. */
+#loadPanel[hidden],#createPanel[hidden]{display:none!important}
+@media (max-width:700px){
+  #workspaceSidebar #loadPanel:not([hidden]){
+    display:flex!important;
+    flex:1 1 auto!important;
+    min-height:0!important;
+    width:100%!important;
+    overflow-y:auto!important;
+    gap:8px!important;
+  }
+  #workspaceSidebar #loadPanel .saved-track-list{
+    min-height:48px!important;
+    max-height:90px!important;
+    overflow-y:auto!important;
+  }
+  #workspaceSidebar #loadPanel .load-actions{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:6px!important;
+  }
+  #workspaceSidebar #loadPanel .load-actions button{
+    min-height:34px!important;
+    padding:6px 8px!important;
+    font-size:11px!important;
+  }
+}
+</style>
+
+<style>
+/* Give the mobile Load Track selector more room without enlarging Create Track. */
+@media (max-width:700px){
+  body.load-active #workspaceSidebar{
+    height:min(440px, 54dvh)!important;
+    max-height:min(440px, 54dvh)!important;
+  }
+  body.load-active #workspaceSidebar #loadPanel:not([hidden]){
+    flex:1 1 auto!important;
+    min-height:0!important;
+    overflow-y:auto!important;
+    gap:10px!important;
+  }
+  body.load-active #workspaceSidebar #loadPanel .panel-help,
+  body.load-active #workspaceSidebar #loadPanel .panel-note{
+    font-size:12px!important;
+    line-height:1.35!important;
+    margin:2px 0!important;
+  }
+  body.load-active #workspaceSidebar #loadPanel .saved-track-list{
+    flex:1 1 auto!important;
+    min-height:100px!important;
+    max-height:190px!important;
+    overflow-y:auto!important;
+  }
+  body.load-active #workspaceSidebar #loadPanel .load-actions{gap:8px!important}
+  body.load-active #workspaceSidebar #loadPanel .load-actions button{
+    min-height:40px!important;
+    padding:8px 10px!important;
+    font-size:12px!important;
+  }
+}
+</style>
+
+<style>
+/* Desktop boundary pin list stays within the sidebar and scrolls independently. */
+@media (min-width:701px){
+  #workspaceSidebar{min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain}
+  #boundPointsList:not([hidden]){
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:6px!important;
+    max-height:220px!important;
+    min-height:0!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:contain!important;
+    scrollbar-gutter:stable!important;
+    padding:9px!important;
+  }
+  #boundPointsList .bound-point-row{min-width:0!important;max-width:100%!important}
+  #boundPointsList .bound-point-row small{overflow:hidden!important;text-overflow:ellipsis!important}
+}
+</style>
+
+<style>
+.bound-point-row .pin-coordinate-input{
+  box-sizing:border-box!important;width:94px!important;min-width:0!important;
+  height:28px!important;min-height:28px!important;padding:3px 5px!important;
+  border:1px solid #405875!important;border-radius:6px!important;
+  background:#101f32!important;color:#e5efff!important;font-size:11px!important;
+}
+@media(max-width:700px){.bound-point-row .pin-coordinate-input{width:78px!important;font-size:10px!important}}
+</style>
+
+<style>
+/* Bound collection screens: selectable saved boundaries and a compact add (+) action. */
+#createPanel .editor-substep-header .add-bound-button{display:grid!important;place-items:center!important;width:40px!important;min-width:40px!important;height:38px!important;min-height:38px!important;margin-left:auto!important;padding:0!important;border-radius:9px!important;background:#dcecff!important;color:#0b1a2c!important;font-size:27px!important;font-weight:500!important}
+#createPanel .editor-substep-header .add-bound-button[hidden]{display:none!important}
+.bound-selection-list{display:grid;gap:8px;max-height:42vh;overflow-y:auto;padding:2px}
+.bound-selection-list[hidden]{display:none!important}
+.bound-selection-item{display:flex!important;align-items:center!important;justify-content:space-between!important;width:100%!important;min-height:62px!important;padding:11px 13px!important;text-align:left!important;background:#14243a!important;border:1px solid #344b67!important;border-radius:11px!important}
+.bound-selection-item strong,.bound-selection-item small{display:block}
+.bound-selection-item strong{font-size:13px}
+.bound-selection-item small{margin-top:5px;color:#9db2cb;font-size:11px;font-weight:400}
+.bound-selection-arrow{font-size:24px;color:#8fc5ff}
+.bound-list-empty{display:block;padding:13px;color:#9db2cb;line-height:1.5}
+#createPanel.step-outer-list .bound-step-buttons,#createPanel.step-inner-list .bound-step-buttons,#createPanel.step-outer-list .utility-step-buttons,#createPanel.step-inner-list .utility-step-buttons,#createPanel.step-outer-list #boundPointsList,#createPanel.step-inner-list #boundPointsList{display:none!important}
+#createPanel.step-outer-list #boundSelectionList,#createPanel.step-inner-list #boundSelectionList{display:grid!important}
+#createPanel.step-outer-list .editor-substep-header,#createPanel.step-inner-list .editor-substep-header{display:flex!important}
+@media(max-width:700px){.bound-selection-list{max-height:24dvh}.bound-selection-item{min-height:54px}}
+</style>
+
+<style>
+/* Make the main-menu question more prominent on desktop and mobile. */
+.main-menu .menu-prompt{
+  font-size:clamp(22px,3.2vw,30px)!important;
+  line-height:1.25!important;
+  font-weight:800!important;
+  letter-spacing:.14em!important;
+}
+</style>
